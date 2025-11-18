@@ -9,6 +9,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnGuardarNuevo = document.getElementById("btnGuardarNuevo");
   const btnReemplazar = document.getElementById("btnReemplazar");
 
+  // === AGREGADO: mostrar campo OTRO vendedor ===
+  document.getElementById("vendedorSelect").addEventListener("change", () => {
+    const sel = document.getElementById("vendedorSelect").value;
+    const campo = document.getElementById("vendedorOtroGroup");
+
+    if (sel === "OTRO") campo.classList.remove("hidden");
+    else campo.classList.add("hidden");
+  });
+
   btnBuscar.addEventListener("click", buscarCliente);
   numeroInput.addEventListener("keyup", (e) => {
     if (e.key === "Enter") buscarCliente();
@@ -46,11 +55,8 @@ function limpiarInfoActual() {
 
 function toggleLoading(show) {
   const overlay = document.getElementById("loadingOverlay");
-  if (show) {
-    overlay.classList.remove("hidden");
-  } else {
-    overlay.classList.add("hidden");
-  }
+  if (show) overlay.classList.remove("hidden");
+  else overlay.classList.add("hidden");
 }
 
 /* === Llamada genérica a la API (via Worker) === */
@@ -97,15 +103,13 @@ async function buscarCliente() {
       setEstado("Cliente no encontrado. Podés guardarlo como nuevo.");
       document.getElementById("btnGuardarNuevo").disabled = false;
       document.getElementById("btnReemplazar").disabled = true;
-      showToast("Este número no existe en ninguna base. Es nuevo.", "info");
+      showToast("Número libre. Es un cliente nuevo.", "info");
       return;
     }
 
-    // Existe en la base
     clienteActual = data.cliente;
     mostrarClienteActual(clienteActual);
 
-    // Completamos el formulario con los datos actuales
     document.getElementById("nombreInput").value = clienteActual.nombre || "";
     document.getElementById("apellidoInput").value = clienteActual.apellido || "";
     document.getElementById("domicilioInput").value = clienteActual.domicilio || "";
@@ -114,8 +118,8 @@ async function buscarCliente() {
     document.getElementById("btnGuardarNuevo").disabled = true;
     document.getElementById("btnReemplazar").disabled = false;
 
-    setEstado("El número ya existe. Podés actualizarlo con 'Reemplazar datos'.");
-    showToast("Cliente encontrado en la base.", "success");
+    setEstado("El número ya existe. Podés actualizarlo.");
+    showToast("Cliente encontrado.", "success");
 
   } catch (err) {
     console.error(err);
@@ -148,6 +152,19 @@ async function guardarCliente(modo) {
   const domicilio = document.getElementById("domicilioInput").value.trim();
   const localidad = document.getElementById("localidadInput").value.trim();
 
+  const vendedorSel = document.getElementById("vendedorSelect").value;
+  const vendedorOtro = document.getElementById("vendedorOtroInput").value.trim();
+
+  // === VALIDACIÓN VENDEDOR ===
+  let vendedor = "";
+  if (vendedorSel === "OTRO") vendedor = vendedorOtro;
+  else vendedor = vendedorSel;
+
+  if (!vendedor) {
+    showToast("Seleccioná un vendedor", "warn");
+    return;
+  }
+
   if (!numero || !nombre || !domicilio || !localidad) {
     showToast("Número, nombre, domicilio y localidad son obligatorios", "warn");
     return;
@@ -157,10 +174,11 @@ async function guardarCliente(modo) {
 
   if (modo === "nuevo") {
     mensajeConfirm =
-      `Se va a CREAR el cliente ${numero} en ambas bases.\n\n` +
+      `Se va a CREAR el cliente ${numero}.\n\n` +
       `Nombre: ${nombre}\n` +
       `Domicilio: ${domicilio}\n` +
-      `Localidad: ${localidad}\n\n` +
+      `Localidad: ${localidad}\n` +
+      `Vendedor: ${vendedor}\n\n` +
       `¿Confirmás?`;
   } else {
     let viejo = "";
@@ -176,18 +194,18 @@ async function guardarCliente(modo) {
       `NUEVO:\n` +
       `Nombre: ${nombre}\n` +
       `Domicilio: ${domicilio}\n` +
-      `Localidad: ${localidad}\n\n`;
+      `Localidad: ${localidad}\n` +
+      `Vendedor: ${vendedor}\n\n`;
 
     mensajeConfirm =
-      `Se van a REEMPLAZAR los datos del cliente ${numero} en ambas bases.\n\n` +
+      `Se van a REEMPLAZAR los datos del cliente ${numero}.\n\n` +
       viejo +
       nuevo +
-      `¿Estás seguro?`;
+      `¿Confirmás?`;
   }
 
   const ok = await customConfirm("Confirmar acción", mensajeConfirm);
-if (!ok) return;
-
+  if (!ok) return;
 
   setEstado("Guardando cambios...");
   toggleLoading(true);
@@ -201,6 +219,7 @@ if (!ok) return;
       apellido,
       domicilio,
       localidad,
+      vendedor   // <=== ENVÍO DEL VENDEDOR NUEVO
     });
 
     toggleLoading(false);
@@ -213,12 +232,11 @@ if (!ok) return;
 
     showToast(data.message || "Cliente guardado correctamente", "success");
     setEstado(
-      data.mode === "nuevo"
+      modo === "nuevo"
         ? "Cliente creado en ambas bases."
         : "Cliente actualizado en ambas bases."
     );
 
-    // Refrescar datos actuales
     buscarCliente();
 
   } catch (err) {
@@ -258,12 +276,10 @@ function customConfirm(titulo, mensaje) {
     okBtn.addEventListener("click", okHandler);
     cancelBtn.addEventListener("click", cancelHandler);
 
-    // Cerrar con click afuera
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) close(false);
     });
 
-    // Cerrar con ESC
     document.addEventListener("keydown", function escHandler(ev) {
       if (ev.key === "Escape") {
         document.removeEventListener("keydown", escHandler);
@@ -272,4 +288,3 @@ function customConfirm(titulo, mensaje) {
     });
   });
 }
-
