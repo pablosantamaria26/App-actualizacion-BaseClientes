@@ -185,7 +185,9 @@ async function guardarCliente(modo) {
       `¿Estás seguro?`;
   }
 
-  if (!confirm(mensajeConfirm)) return;
+  const ok = await customConfirm("Confirmar acción", mensajeConfirm);
+if (!ok) return;
+
 
   setEstado("Guardando cambios...");
   toggleLoading(true);
