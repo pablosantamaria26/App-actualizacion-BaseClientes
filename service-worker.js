@@ -1,4 +1,5 @@
-const CACHE_NAME = "clientes-ml-v2"; // <--- CLAVE: Cambiar la versión
+const CACHE_NAME = "clientes-ml-v3";
+
 const ASSETS = [
   "./",
   "index.html",
