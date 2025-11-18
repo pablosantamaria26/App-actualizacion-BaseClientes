@@ -1,9 +1,9 @@
 {
-  "name": "Gestor de Clientes Mercadolimpio",
+  "name": "Gestor de Clientes Mercado Limpio",
   "short_name": "Clientes ML",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#f4f6fb",
+  "background_color": "#050816",
   "theme_color": "#0d6efd",
   "icons": [
     {
