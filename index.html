@@ -10,20 +10,6 @@
   <meta name="theme-color" content="#0d6efd" />
 </head>
 <body>
-<!-- 🔥 Modal de confirmación -->
-<div id="confirmOverlay" class="modal-overlay hidden">
-  <div class="modal-card">
-    <h3 id="confirmTitle">Confirmación</h3>
-    <p id="confirmMessage"></p>
-
-    <div class="modal-buttons">
-      <button id="confirmCancel" class="btn-cancel">Cancelar</button>
-      <button id="confirmOk" class="btn-ok">Aceptar</button>
-    </div>
-  </div>
-</div>
-
-  
   <div class="gradient-bg"></div>
 
   <header class="app-header">
@@ -46,9 +32,7 @@
             Buscar
           </button>
         </div>
-        <small class="help-text">
-          Escribí el número y tocá "Buscar" para ver si ya existe en las bases.
-        </small>
+        <small class="help-text">Escribí el número y tocá "Buscar" para ver si ya existe en las bases.</small>
       </div>
 
       <div class="form-row-2">
@@ -72,23 +56,25 @@
           <input id="localidadInput" type="text" placeholder="Ej: Guernica" />
         </div>
       </div>
+
+      <!-- 🔥 AGREGADO NUEVO: SELECTOR DE VENDEDOR -->
+      <div class="form-group">
+        <label for="vendedorSelect">Vendedor</label>
+        <select id="vendedorSelect">
+          <option value="">Seleccionar vendedor...</option>
+          <option value="MARTIN">MARTIN</option>
+          <option value="LUCAS">LUCAS</option>
+          <option value="OTRO">OTRO</option>
+        </select>
+      </div>
+
+      <!-- 🔥 AGREGADO NUEVO: CAMPO PARA OTRO VENDEDOR -->
+      <div class="form-group hidden" id="vendedorOtroGroup">
+        <label for="vendedorOtroInput">Nombre del vendedor</label>
+        <input id="vendedorOtroInput" type="text" placeholder="Escribí el nombre" />
+      </div>
+      <!-- 🔥 FIN AGREGADO -->
     </section>
-
-    <div class="form-group">
-  <label for="vendedorSelect">Vendedor</label>
-  <select id="vendedorSelect">
-    <option value="">Seleccionar vendedor...</option>
-    <option value="MARTIN">MARTIN</option>
-    <option value="LUCAS">LUCAS</option>
-    <option value="OTRO">OTRO</option>
-  </select>
-</div>
-
-<div class="form-group hidden" id="vendedorOtroGroup">
-  <label for="vendedorOtroInput">Nombre del vendedor</label>
-  <input id="vendedorOtroInput" type="text" placeholder="Escribí el nombre" />
-</div>
-
 
     <section id="infoActualSection" class="card card-contrast hidden">
       <h2>Cliente actual en las bases</h2>
@@ -97,9 +83,7 @@
 
     <section class="card card-actions">
       <h2>Acciones</h2>
-      <p id="estadoTexto" class="estado-texto">
-        Primero buscá el cliente por número.
-      </p>
+      <p id="estadoTexto" class="estado-texto">Primero buscá el cliente por número.</p>
 
       <div class="button-row">
         <button id="btnGuardarNuevo" type="button" class="btn-primary bounce" disabled>
@@ -112,7 +96,7 @@
     </section>
   </main>
 
-  <!-- Spinner / overlay -->
+  <!-- Loading -->
   <div id="loadingOverlay" class="loading-overlay hidden">
     <div class="spinner"></div>
     <p>Sincronizando con la nube...</p>
@@ -120,6 +104,18 @@
 
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
+
+  <!-- Confirm personalizado (ya lo tenés) -->
+  <div id="confirmOverlay" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 id="confirmTitle">Confirmación</h3>
+      <p id="confirmMessage"></p>
+      <div class="modal-buttons">
+        <button id="confirmCancel" class="btn-cancel">Cancelar</button>
+        <button id="confirmOk" class="btn-ok">Aceptar</button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
   <script>
