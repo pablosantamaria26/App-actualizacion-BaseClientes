@@ -1,7 +1,7 @@
-/* === CONFIGURACIÓN === */
-const API_URL = "https://script.google.com/macros/s/AKfycbzFF0GDbnLuqCgM8K1QHS5ID5tw6J8RprfgVog3fpJ3dlTBsep_pOlR4TXTeGzMPxrwSg/exec";
+/* === CONFIG GENERAL === */
+const API_URL = "https://jolly-dust-2d7a.santamariapablodaniel.workers.dev/";
 
-let clienteActual = null; // Datos actuales en la base (si existe)
+let clienteActual = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   const numeroInput = document.getElementById("numeroInput");
@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
   btnReemplazar.addEventListener("click", () => guardarCliente("reemplazo"));
 });
 
-/* === Utilidades UI === */
+/* === UI Helpers === */
 function showToast(msg, type = "info") {
   const toast = document.getElementById("toast");
   toast.textContent = msg;
@@ -36,6 +36,7 @@ function limpiarInfoActual() {
   clienteActual = null;
   const infoSection = document.getElementById("infoActualSection");
   const infoDiv = document.getElementById("infoActual");
+
   infoDiv.innerHTML = "";
   infoSection.classList.add("hidden");
 
@@ -43,14 +44,22 @@ function limpiarInfoActual() {
   document.getElementById("btnReemplazar").disabled = true;
 }
 
-/* === Llamadas a la API === */
+function toggleLoading(show) {
+  const overlay = document.getElementById("loadingOverlay");
+  if (show) {
+    overlay.classList.remove("hidden");
+  } else {
+    overlay.classList.add("hidden");
+  }
+}
+
+/* === Llamada genérica a la API (via Worker) === */
 async function apiPost(payload) {
   const resp = await fetch(API_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-
   if (!resp.ok) {
     throw new Error("Error HTTP: " + resp.status);
   }
@@ -68,12 +77,15 @@ async function buscarCliente() {
 
   setEstado("Buscando cliente...");
   limpiarInfoActual();
+  toggleLoading(true);
 
   try {
     const data = await apiPost({
       action: "getCliente",
       numero,
     });
+
+    toggleLoading(false);
 
     if (!data.ok) {
       showToast(data.error || "Error en la búsqueda", "error");
@@ -85,15 +97,15 @@ async function buscarCliente() {
       setEstado("Cliente no encontrado. Podés guardarlo como nuevo.");
       document.getElementById("btnGuardarNuevo").disabled = false;
       document.getElementById("btnReemplazar").disabled = true;
-      showToast("Este número no existe en la base. Es nuevo.", "info");
+      showToast("Este número no existe en ninguna base. Es nuevo.", "info");
       return;
     }
 
-    // 👉 Existe en la base
+    // Existe en la base
     clienteActual = data.cliente;
     mostrarClienteActual(clienteActual);
 
-    // Rellenamos el formulario con los datos actuales (más cómodo para editar)
+    // Completamos el formulario con los datos actuales
     document.getElementById("nombreInput").value = clienteActual.nombre || "";
     document.getElementById("apellidoInput").value = clienteActual.apellido || "";
     document.getElementById("domicilioInput").value = clienteActual.domicilio || "";
@@ -102,10 +114,12 @@ async function buscarCliente() {
     document.getElementById("btnGuardarNuevo").disabled = true;
     document.getElementById("btnReemplazar").disabled = false;
 
-    setEstado("El número ya existe. Podés actualizar sus datos con 'Reemplazar'.");
+    setEstado("El número ya existe. Podés actualizarlo con 'Reemplazar datos'.");
     showToast("Cliente encontrado en la base.", "success");
+
   } catch (err) {
     console.error(err);
+    toggleLoading(false);
     showToast("Error al conectar con el servidor", "error");
     setEstado("Error de conexión con la API.");
   }
@@ -116,11 +130,11 @@ function mostrarClienteActual(cli) {
   const infoDiv = document.getElementById("infoActual");
 
   infoDiv.innerHTML = `
-    <p><strong>Número:</strong> ${cli.numero}</p>
-    <p><strong>Nombre:</strong> ${cli.nombre}</p>
-    <p><strong>Apellido:</strong> ${cli.apellido}</p>
-    <p><strong>Domicilio:</strong> ${cli.domicilio}</p>
-    <p><strong>Localidad:</strong> ${cli.localidad}</p>
+    <p><span>Número:</span> ${cli.numero}</p>
+    <p><span>Nombre:</span> ${cli.nombre}</p>
+    <p><span>Apellido:</span> ${cli.apellido}</p>
+    <p><span>Domicilio:</span> ${cli.domicilio}</p>
+    <p><span>Localidad:</span> ${cli.localidad}</p>
   `;
 
   infoSection.classList.remove("hidden");
@@ -174,6 +188,8 @@ async function guardarCliente(modo) {
   if (!confirm(mensajeConfirm)) return;
 
   setEstado("Guardando cambios...");
+  toggleLoading(true);
+
   try {
     const data = await apiPost({
       action: "guardarCliente",
@@ -184,6 +200,8 @@ async function guardarCliente(modo) {
       domicilio,
       localidad,
     });
+
+    toggleLoading(false);
 
     if (!data.ok) {
       showToast(data.error || "Error al guardar", "error");
@@ -198,10 +216,12 @@ async function guardarCliente(modo) {
         : "Cliente actualizado en ambas bases."
     );
 
-    // Después de guardar, forzamos nueva búsqueda para refrescar datos
+    // Refrescar datos actuales
     buscarCliente();
+
   } catch (err) {
     console.error(err);
+    toggleLoading(false);
     showToast("Error de conexión al guardar", "error");
     setEstado("Error de conexión con la API.");
   }
