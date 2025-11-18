@@ -1,4 +1,4 @@
-/* === CONFIG GENERAL === */
+/* === CONFIG GENERAL === */ 
 const API_URL = "https://jolly-dust-2d7a.santamariapablodaniel.workers.dev/";
 
 let clienteActual = null;
