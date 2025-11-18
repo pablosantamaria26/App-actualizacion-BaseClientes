@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gestor de Clientes ML</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+
+  <meta name="theme-color" content="#0d6efd" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>Gestor de Clientes</h1>
+    <p>Alta y actualización sincronizada de BaseClientes A & B</p>
+  </header>
+
+  <main class="app-main">
+    <section class="card">
+      <h2>Datos del cliente</h2>
+
+      <div class="form-group">
+        <label for="numeroInput">Número de cliente</label>
+        <div class="row-inline">
+          <input id="numeroInput" type="number" inputmode="numeric" placeholder="Ej: 10001" />
+          <button id="btnBuscar" type="button">Buscar</button>
+        </div>
+        <small id="numeroHelp" class="help-text">
+          Escribí el número y tocá "Buscar" para ver si ya existe.
+        </small>
+      </div>
+
+      <div class="form-group">
+        <label for="nombreInput">Nombre / Razón Social</label>
+        <input id="nombreInput" type="text" placeholder="Perfumería Rocco" />
+      </div>
+
+      <div class="form-group">
+        <label for="apellidoInput">Apellido / Referente</label>
+        <input id="apellidoInput" type="text" placeholder="Opcional" />
+      </div>
+
+      <div class="form-group">
+        <label for="domicilioInput">Domicilio</label>
+        <input id="domicilioInput" type="text" placeholder="Calle y número" />
+      </div>
+
+      <div class="form-group">
+        <label for="localidadInput">Localidad</label>
+        <input id="localidadInput" type="text" placeholder="Ej: Guernica" />
+      </div>
+    </section>
+
+    <section id="infoActualSection" class="card hidden">
+      <h2>Cliente actual en la base</h2>
+      <div id="infoActual"></div>
+    </section>
+
+    <section class="card">
+      <h2>Acciones</h2>
+      <p id="estadoTexto">Primero buscá el cliente por número.</p>
+
+      <div class="button-row">
+        <button id="btnGuardarNuevo" type="button" disabled>
+          Guardar como NUEVO cliente
+        </button>
+        <button id="btnReemplazar" type="button" disabled class="btn-warn">
+          Reemplazar datos del cliente
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+  <script>
+    // Registramos service worker
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js").catch(console.error);
+      });
+    }
+  </script>
+</body>
+</html>
