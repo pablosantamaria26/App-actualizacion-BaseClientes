@@ -16,7 +16,9 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k))))
+      Promise.all(
+        keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k)))
+      )
     )
   );
 });
@@ -24,7 +26,6 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
-  // Solo cacheamos recursos propios (no la API)
   if (request.method !== "GET") return;
   if (!request.url.startsWith(self.location.origin)) return;
 
