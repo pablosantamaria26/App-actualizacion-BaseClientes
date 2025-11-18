@@ -226,3 +226,48 @@ async function guardarCliente(modo) {
     setEstado("Error de conexión con la API.");
   }
 }
+
+/* =========================================================
+   Confirm personalizado — Devuelve Promesa (true / false)
+   ========================================================= */
+function customConfirm(titulo, mensaje) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById("confirmOverlay");
+    const msgBox = document.getElementById("confirmMessage");
+    const titleBox = document.getElementById("confirmTitle");
+
+    titleBox.textContent = titulo;
+    msgBox.textContent = mensaje;
+    overlay.classList.remove("hidden");
+
+    const okBtn = document.getElementById("confirmOk");
+    const cancelBtn = document.getElementById("confirmCancel");
+
+    function close(result) {
+      overlay.classList.add("hidden");
+      okBtn.removeEventListener("click", okHandler);
+      cancelBtn.removeEventListener("click", cancelHandler);
+      resolve(result);
+    }
+
+    function okHandler() { close(true); }
+    function cancelHandler() { close(false); }
+
+    okBtn.addEventListener("click", okHandler);
+    cancelBtn.addEventListener("click", cancelHandler);
+
+    // Cerrar con click afuera
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close(false);
+    });
+
+    // Cerrar con ESC
+    document.addEventListener("keydown", function escHandler(ev) {
+      if (ev.key === "Escape") {
+        document.removeEventListener("keydown", escHandler);
+        close(false);
+      }
+    });
+  });
+}
+
