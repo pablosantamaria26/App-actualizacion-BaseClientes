@@ -1,2 +1,940 @@
 <!DOCTYPE html>
-<meta http-equiv="refresh" content="0; url=index_v2.html">
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gestor de Clientes — ML</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0d6efd" />
+  <link rel="manifest" href="manifest.json">
+
+
+  <!-- AHORA TODO EL CSS ESTÁ AQUÍ PARA EVITAR PROBLEMAS DE CACHÉ -->
+  <style>
+    :root {
+      --primary: #0d6efd;
+      --primary-soft: #4dabff;
+      --secondary: #ff7a1a;
+      --bg: #050816;
+      --card-bg: rgba(10, 18, 40, 0.92);
+      --card-bg-contrast: rgba(255, 255, 255, 0.96);
+      --text-main: #f5f5f5;
+      --text-muted: #9ca3af;
+      --border-soft: rgba(148, 163, 184, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* Fondo gradiente */
+    .gradient-bg {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 10% 20%, rgba(13, 110, 253, 0.35) 0, transparent 55%),
+        radial-gradient(circle at 90% 80%, rgba(255, 122, 26, 0.35) 0, transparent 55%);
+      opacity: 0.9;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    /* Header */
+    .app-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 1.2rem;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(14px);
+      background: linear-gradient(90deg, rgba(5, 8, 22, 0.9), rgba(5, 8, 22, 0.6));
+      border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .logo-circle {
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(145deg, var(--primary), var(--secondary));
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: white;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.7);
+    }
+
+    .title-block h1 {
+      font-size: 1.25rem;
+      line-height: 1.2;
+    }
+
+    .title-block p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Main */
+    .app-main {
+      padding: 1.1rem;
+      max-width: 780px;
+      margin: 0 auto 4rem;
+    }
+
+    /* Cards */
+    .card {
+      border-radius: 18px;
+      padding: 1rem 1.1rem 1.3rem;
+      margin-bottom: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-glass {
+      background: radial-gradient(circle at top left, rgba(13, 110, 253, 0.16), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(255, 122, 26, 0.18), transparent 55%),
+                  rgba(15, 23, 42, 0.92);
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.9);
+    }
+
+    .card-contrast {
+      background: var(--card-bg-contrast);
+      color: #111827;
+      border: 1px solid rgba(156, 163, 175, 0.45);
+    }
+
+    .card-actions {
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px dashed rgba(148, 163, 184, 0.6);
+    }
+
+    .card h2 {
+      font-size: 1.05rem;
+      margin-bottom: 0.75rem;
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 0.8rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.6rem 0.7rem;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--text-main);
+      font-size: 0.9rem;
+      transition: border 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+    }
+
+    .card-contrast .form-group input {
+      background: white;
+      color: #111827;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary-soft);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.8);
+      transform: translateY(-1px);
+    }
+
+    .help-text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    .row-inline {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .row-inline input {
+      flex: 1;
+    }
+
+    .form-row-2 {
+      display: flex;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+    }
+
+    .form-row-2 .form-group {
+      flex: 1;
+    }
+
+    /* Buttons */
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 0.6rem 1rem;
+      font-size: 0.88rem;
+      cursor: pointer;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.15s ease;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-soft));
+      color: white;
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.5);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, var(--secondary), #ffb347);
+      color: #111827;
+      box-shadow: 0 10px 25px rgba(234, 88, 12, 0.4);
+    }
+
+    button:active {
+      transform: translateY(1px) scale(0.97);
+      box-shadow: none;
+    }
+
+    /* Rebote suave */
+    .bounce {
+      animation: float-in 0.4s ease-out;
+    }
+
+    @keyframes float-in {
+      from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Acción group */
+    .button-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    @media (min-width: 520px) {
+      .button-row {
+        flex-direction: row;
+      }
+    }
+
+    /* Info actual */
+    .info-actual p {
+      font-size: 0.86rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .info-actual span {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .card-contrast .info-actual span {
+      color: #1d4ed8;
+    }
+
+    .estado-texto {
+      font-size: 0.86rem;
+      color: var(--text-muted);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 1.5rem;
+      transform: translateX(-50%);
+      padding: 0.7rem 1.2rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      z-index: 9999;
+      color: #fff;
+      background: #111827;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
+    }
+
+    .toast-info {
+      background: var(--primary);
+    }
+
+    .toast-success {
+      background: #16a34a;
+    }
+
+    .toast-warn {
+      background: #f97316;
+    }
+
+    .toast-error {
+      background: #dc2626;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      color: #e5e7eb;
+    }
+
+    .spinner {
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      border: 3px solid rgba(148, 163, 184, 0.4);
+      border-top-color: var(--secondary);
+      border-right-color: var(--primary);
+      animation: spin 0.9s linear infinite;
+      margin-bottom: 0.75rem;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loading-overlay p {
+      font-size: 0.9rem;
+      color: #e5e7eb;
+    }
+
+    /* Pequeños ajustes responsivos */
+    @media (max-width: 480px) {
+      .title-block h1 {
+        font-size: 1.1rem;
+      }
+    }
+
+    /* ===== Modal Confirm ===== */
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .modal-card {
+      width: 90%;
+      max-width: 380px;
+      background: #111827;
+      color: #f1f5f9;
+      padding: 1.5rem;
+      border-radius: 18px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+      animation: popIn 0.25s ease-out;
+    }
+
+    .modal-card h3 {
+      margin-top: 0;
+      margin-bottom: 0.7rem;
+      font-size: 1.15rem;
+      color: var(--primary-soft);
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.6rem;
+      margin-top: 1.3rem;
+    }
+
+    .btn-cancel {
+      padding: 0.55rem 1.1rem;
+      border-radius: 999px;
+      background: #374151;
+      color: #e5e7eb;
+      font-size: 0.85rem;
+    }
+
+    .btn-ok {
+      padding: 0.55rem 1.1rem;
+      border-radius: 999px;
+      background: var(--secondary);
+      color: #111827;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0 }
+      to { opacity: 1 }
+    }
+
+    /* ESTILOS CLAVE PARA EL SELECTOR Y EL INPUT DE VENDEDOR */
+    #vendedorSelect, #vendedorOtroInput {
+      width: 100%;
+      padding: 0.6rem 0.7rem;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--text-main);
+      font-size: 0.9rem;
+      /* Asegura que no se comprima */
+      height: auto; 
+      min-height: 40px; 
+    }
+
+    .card-contrast #vendedorSelect,
+    .card-contrast #vendedorOtroInput {
+      background: white;
+      color: #111827;
+    }
+
+    /* ESTILO DE FOCUS */
+    #vendedorSelect:focus,
+    #vendedorOtroInput:focus {
+      outline: none;
+      border-color: var(--primary-soft);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.8);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+  <div class="gradient-bg"></div>
+
+  <header class="app-header">
+    <div class="logo-circle">ML</div>
+    <div class="title-block">
+      <h1>Gestor de Clientes</h1>
+      <p>Alta y actualización sincronizada — Bases A & B</p>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <section class="card card-glass">
+      <h2>Buscar / Crear cliente</h2>
+
+      <div class="form-group">
+        <label for="numeroInput">Número de cliente</label>
+        <div class="row-inline">
+          <input id="numeroInput" type="number" inputmode="numeric" placeholder="Ej: 10001" />
+          <button id="btnBuscar" type="button" class="btn-primary bounce">
+            Buscar
+          </button>
+        </div>
+        <small class="help-text">Escribí el número y tocá "Buscar" para ver si ya existe en las bases.</small>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-group">
+          <label for="nombreInput">Nombre / Razón Social</label>
+          <input id="nombreInput" type="text" placeholder="Perfumería Rocco" />
+        </div>
+        <div class="form-group">
+          <label for="apellidoInput">Apellido / Referente</label>
+          <input id="apellidoInput" type="text" placeholder="Opcional" />
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-group">
+          <label for="domicilioInput">Domicilio</label>
+          <input id="domicilioInput" type="text" placeholder="Calle y número" />
+        </div>
+        <div class="form-group">
+          <label for="localidadInput">Localidad</label>
+          <input id="localidadInput" type="text" placeholder="Ej: Guernica" />
+        </div>
+      </div>
+
+      <!-- 🔥 AQUÍ ESTÁ EL SELECTOR QUE DEBE SER VISIBLE 🔥 -->
+      <div class="form-group">
+        <label for="vendedorSelect">Vendedor</label>
+        <select id="vendedorSelect">
+          <option value="">Seleccionar vendedor...</option>
+          <option value="MARTIN">MARTIN</option>
+          <option value="LUCAS">LUCAS</option>
+          <option value="OTRO">OTRO</option>
+        </select>
+      </div>
+
+      <!-- 🔥 CAMPO PARA OTRO VENDEDOR (OCULTO POR DEFECTO) 🔥 -->
+      <div class="form-group hidden" id="vendedorOtroGroup">
+        <label for="vendedorOtroInput">Nombre del vendedor</label>
+        <input id="vendedorOtroInput" type="text" placeholder="Escribí el nombre" />
+      </div>
+      <!-- FIN AGREGADO -->
+    </section>
+
+    <section id="infoActualSection" class="card card-contrast hidden">
+      <h2>Cliente actual en las bases</h2>
+      <div id="infoActual" class="info-actual"></div>
+    </section>
+
+    <section class="card card-actions">
+      <h2>Acciones</h2>
+      <p id="estadoTexto" class="estado-texto">Primero buscá el cliente por número.</p>
+
+      <div class="button-row">
+        <button id="btnGuardarNuevo" type="button" class="btn-primary bounce" disabled>
+          Guardar como NUEVO cliente
+        </button>
+        <button id="btnReemplazar" type="button" class="btn-secondary bounce" disabled>
+          Reemplazar datos del cliente
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Loading -->
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="spinner"></div>
+    <p>Sincronizando con la nube...</p>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Confirm personalizado -->
+  <div id="confirmOverlay" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 id="confirmTitle">Confirmación</h3>
+      <p id="confirmMessage"></p>
+      <div class="modal-buttons">
+        <button id="confirmCancel" class="btn-cancel">Cancelar</button>
+        <button id="confirmOk" class="btn-ok">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AHORA TODO EL JS ESTÁ AQUÍ PARA EVITAR PROBLEMAS DE CACHÉ -->
+  <script>
+    /* === CONFIG GENERAL === */
+    const API_URL = "https://jolly-dust-2d7a.santamariapablodaniel.workers.dev/";
+
+    let clienteActual = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const numeroInput = document.getElementById("numeroInput");
+      const btnBuscar = document.getElementById("btnBuscar");
+      const btnGuardarNuevo = document.getElementById("btnGuardarNuevo");
+      const btnReemplazar = document.getElementById("btnReemplazar");
+
+      // === LÓGICA AGREGADA: mostrar campo OTRO vendedor ===
+      const vendedorSelect = document.getElementById("vendedorSelect");
+      const vendedorOtroGroup = document.getElementById("vendedorOtroGroup");
+
+      if (vendedorSelect && vendedorOtroGroup) {
+        vendedorSelect.addEventListener("change", () => {
+          const sel = vendedorSelect.value;
+          
+          if (sel === "OTRO") {
+            vendedorOtroGroup.classList.remove("hidden");
+          } else {
+            vendedorOtroGroup.classList.add("hidden");
+            document.getElementById("vendedorOtroInput").value = ""; // Limpiar si cambia
+          }
+        });
+      }
+
+
+      btnBuscar.addEventListener("click", buscarCliente);
+      numeroInput.addEventListener("keyup", (e) => {
+        if (e.key === "Enter") buscarCliente();
+      });
+
+      btnGuardarNuevo.addEventListener("click", () => guardarCliente("nuevo"));
+      btnReemplazar.addEventListener("click", () => guardarCliente("reemplazo"));
+    });
+
+    /* === UI Helpers === */
+    function showToast(msg, type = "info") {
+      const toast = document.getElementById("toast");
+      toast.textContent = msg;
+      // Remueve clases previas antes de añadir la nueva
+      toast.className = `toast toast-${type}`;
+      setTimeout(() => {
+        toast.className = "toast hidden";
+      }, 4000);
+    }
+
+    function setEstado(texto) {
+      document.getElementById("estadoTexto").textContent = texto;
+    }
+
+    function limpiarInfoActual() {
+      clienteActual = null;
+      const infoSection = document.getElementById("infoActualSection");
+      const infoDiv = document.getElementById("infoActual");
+
+      infoDiv.innerHTML = "";
+      infoSection.classList.add("hidden");
+
+      document.getElementById("btnGuardarNuevo").disabled = false;
+      document.getElementById("btnReemplazar").disabled = true;
+    }
+
+    function toggleLoading(show) {
+      const overlay = document.getElementById("loadingOverlay");
+      if (show) overlay.classList.remove("hidden");
+      else overlay.classList.add("hidden");
+    }
+
+    // Función auxiliar para esperar
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /* === Llamada genérica a la API (via Worker) === */
+    // Se añade lógica de reintento con Retroceso Exponencial para manejar el error 429
+    async function apiPost(payload, maxRetries = 3) {
+      let attempt = 0;
+      while (attempt < maxRetries) {
+        attempt++;
+        
+        try {
+            const resp = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            if (resp.ok) {
+                return await resp.json();
+            }
+
+            // Manejar error 429 (Demasiadas Solicitudes)
+            if (resp.status === 429 && attempt < maxRetries) {
+                // Retroceso exponencial con "jitter" (tiempo aleatorio): 2^intento * 1000ms + random(0-1000ms)
+                const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 1000);
+                console.warn(`[API] Solicitudes excesivas (429). Reintentando en ${Math.round(delay / 1000)}s... Intento ${attempt}/${maxRetries}`);
+                await sleep(delay);
+                continue; // Reintentar el bucle
+            }
+
+            // Manejar otros errores HTTP o 429 después del máximo de reintentos
+            throw new Error("Error HTTP: " + resp.status);
+            
+        } catch (error) {
+            // Manejar errores de red (ej. failed to fetch)
+            if (attempt < maxRetries) {
+                const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 1000);
+                console.warn(`[API] Error de red. Reintentando en ${Math.round(delay / 1000)}s... Intento ${attempt}/${maxRetries}`);
+                await sleep(delay);
+                continue; // Reintentar el bucle
+            }
+            throw error; // Relanzar el error si es el último intento
+        }
+      }
+    }
+
+    /* === Buscar cliente por número === */
+    async function buscarCliente() {
+      const numero = document.getElementById("numeroInput").value.trim();
+
+      if (!numero) {
+        showToast("Ingresá un número de cliente", "warn");
+        return;
+      }
+
+      setEstado("Buscando cliente...");
+      limpiarInfoActual();
+      toggleLoading(true);
+
+      try {
+        const data = await apiPost({
+          action: "getCliente",
+          numero,
+        });
+
+        toggleLoading(false);
+
+        if (!data.ok) {
+          showToast(data.error || "Error en la búsqueda", "error");
+          setEstado("Error al buscar el cliente.");
+          return;
+        }
+
+        if (!data.found) {
+          setEstado("Cliente no encontrado. Podés guardarlo como nuevo.");
+          document.getElementById("btnGuardarNuevo").disabled = false;
+          document.getElementById("btnReemplazar").disabled = true;
+          showToast("Número libre. Es un cliente nuevo.", "info");
+          return;
+        }
+
+        clienteActual = data.cliente;
+        mostrarClienteActual(clienteActual);
+
+        document.getElementById("nombreInput").value = clienteActual.nombre || "";
+        document.getElementById("apellidoInput").value = clienteActual.apellido || "";
+        document.getElementById("domicilioInput").value = clienteActual.domicilio || "";
+        document.getElementById("localidadInput").value = clienteActual.localidad || "";
+        
+        // Actualiza el selector de vendedor si el cliente ya lo tiene
+        const vendedorExistente = clienteActual.vendedor || "";
+        const vendedorSelect = document.getElementById("vendedorSelect");
+        const vendedorOtroGroup = document.getElementById("vendedorOtroGroup");
+        const vendedorOtroInput = document.getElementById("vendedorOtroInput");
+
+        if (["MARTIN", "LUCAS", "OTRO"].includes(vendedorExistente)) {
+            vendedorSelect.value = vendedorExistente;
+            vendedorOtroGroup.classList.add("hidden");
+            vendedorOtroInput.value = "";
+        } else if (vendedorExistente) {
+            // El vendedor no está en la lista predefinida
+            vendedorSelect.value = "OTRO";
+            vendedorOtroGroup.classList.remove("hidden");
+            vendedorOtroInput.value = vendedorExistente;
+        } else {
+            // No tiene vendedor
+            vendedorSelect.value = "";
+            vendedorOtroGroup.classList.add("hidden");
+            vendedorOtroInput.value = "";
+        }
+
+
+        document.getElementById("btnGuardarNuevo").disabled = true;
+        document.getElementById("btnReemplazar").disabled = false;
+
+        setEstado("El número ya existe. Podés actualizarlo.");
+        showToast("Cliente encontrado.", "success");
+
+      } catch (err) {
+        console.error(err);
+        toggleLoading(false);
+        showToast("Error al conectar con el servidor", "error");
+        setEstado("Error de conexión con la API.");
+      }
+    }
+
+    function mostrarClienteActual(cli) {
+      const infoSection = document.getElementById("infoActualSection");
+      const infoDiv = document.getElementById("infoActual");
+      
+      // Agregado: Muestra también el vendedor actual si existe
+      const vendedorHtml = cli.vendedor ? `<p><span>Vendedor:</span> ${cli.vendedor}</p>` : '';
+
+      infoDiv.innerHTML = `
+        <p><span>Número:</span> ${cli.numero}</p>
+        <p><span>Nombre:</span> ${cli.nombre}</p>
+        <p><span>Apellido:</span> ${cli.apellido}</p>
+        <p><span>Domicilio:</span> ${cli.domicilio}</p>
+        <p><span>Localidad:</span> ${cli.localidad}</p>
+        ${vendedorHtml}
+      `;
+
+      infoSection.classList.remove("hidden");
+    }
+
+    /* === Guardar cliente (nuevo o reemplazo) === */
+    async function guardarCliente(modo) {
+      const numero = document.getElementById("numeroInput").value.trim();
+      const nombre = document.getElementById("nombreInput").value.trim();
+      const apellido = document.getElementById("apellidoInput").value.trim();
+      const domicilio = document.getElementById("domicilioInput").value.trim();
+      const localidad = document.getElementById("localidadInput").value.trim();
+
+      const vendedorSel = document.getElementById("vendedorSelect").value;
+      const vendedorOtro = document.getElementById("vendedorOtroInput").value.trim();
+
+      // === VALIDACIÓN VENDEDOR ===
+      let vendedor = "";
+      if (vendedorSel === "OTRO") vendedor = vendedorOtro;
+      else vendedor = vendedorSel;
+
+      if (!vendedor) {
+        showToast("Seleccioná un vendedor", "warn");
+        return;
+      }
+
+      if (!numero || !nombre || !domicilio || !localidad) {
+        showToast("Número, nombre, domicilio y localidad son obligatorios", "warn");
+        return;
+      }
+
+      let mensajeConfirm = "";
+
+      if (modo === "nuevo") {
+        mensajeConfirm =
+          `Se va a CREAR el cliente ${numero}.\n\n` +
+          `Nombre: ${nombre}\n` +
+          `Domicilio: ${domicilio}\n` +
+          `Localidad: ${localidad}\n` +
+          `Vendedor: ${vendedor}\n\n` +
+          `¿Confirmás?`;
+      } else {
+        let viejo = "";
+        if (clienteActual) {
+          viejo =
+            `ACTUAL:\n` +
+            `Nombre: ${clienteActual.nombre}\n` +
+            `Domicilio: ${clienteActual.domicilio}\n` +
+            `Localidad: ${clienteActual.localidad}\n` +
+            `Vendedor: ${clienteActual.vendedor || 'N/A'}\n\n`; // Muestra vendedor viejo
+        }
+
+        const nuevo =
+          `NUEVO:\n` +
+          `Nombre: ${nombre}\n` +
+          `Domicilio: ${domicilio}\n` +
+          `Localidad: ${localidad}\n` +
+          `Vendedor: ${vendedor}\n\n`;
+
+        mensajeConfirm =
+          `Se van a REEMPLAZAR los datos del cliente ${numero}.\n\n` +
+          viejo +
+          nuevo +
+          `¿Confirmás?`;
+      }
+
+      const ok = await customConfirm("Confirmar acción", mensajeConfirm);
+      if (!ok) return;
+
+      setEstado("Guardando cambios...");
+      toggleLoading(true);
+
+      try {
+        const data = await apiPost({
+          action: "guardarCliente",
+          modo,
+          numero,
+          nombre,
+          apellido,
+          domicilio,
+          localidad,
+          vendedor // <=== ENVÍO DEL VENDEDOR NUEVO
+        });
+
+        toggleLoading(false);
+
+        if (!data.ok) {
+          showToast(data.error || "Error al guardar", "error");
+          setEstado("Hubo un problema al guardar.");
+          return;
+        }
+
+        showToast(data.message || "Cliente guardado correctamente", "success");
+        setEstado(
+          modo === "nuevo"
+            ? "Cliente creado en ambas bases."
+            : "Cliente actualizado en ambas bases."
+        );
+
+        // Volver a buscar para actualizar la UI con los nuevos datos
+        buscarCliente();
+
+      } catch (err) {
+        console.error(err);
+        toggleLoading(false);
+        showToast("Error de conexión al guardar", "error");
+        setEstado("Error de conexión con la API.");
+      }
+    }
+
+    /* =========================================================
+      Confirm personalizado — Devuelve Promesa (true / false)
+      ========================================================= */
+    function customConfirm(titulo, mensaje) {
+      return new Promise((resolve) => {
+        const overlay = document.getElementById("confirmOverlay");
+        const msgBox = document.getElementById("confirmMessage");
+        const titleBox = document.getElementById("confirmTitle");
+
+        titleBox.textContent = titulo;
+        msgBox.textContent = mensaje;
+        overlay.classList.remove("hidden");
+
+        const okBtn = document.getElementById("confirmOk");
+        const cancelBtn = document.getElementById("confirmCancel");
+
+        function close(result) {
+          overlay.classList.add("hidden");
+          okBtn.removeEventListener("click", okHandler);
+          cancelBtn.removeEventListener("click", cancelHandler);
+          resolve(result);
+        }
+
+        function okHandler() { close(true); }
+        function cancelHandler() { close(false); }
+
+        okBtn.addEventListener("click", okHandler);
+        cancelBtn.addEventListener("click", cancelHandler);
+
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) close(false);
+        });
+
+        document.addEventListener("keydown", function escHandler(ev) {
+          if (ev.key === "Escape") {
+            document.removeEventListener("keydown", escHandler);
+            close(false);
+          }
+        });
+      });
+    }
+  </script>
+  <script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js")
+    .then(() => console.log("SW registrado"))
+    .catch(err => console.error("Error registrando SW:", err));
+}
+</script>
+
+</body>
+</html>
