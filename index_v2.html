@@ -5,6 +5,8 @@
   <title>Gestor de Clientes — ML</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0d6efd" />
+  <link rel="manifest" href="manifest.json">
+
 
   <!-- AHORA TODO EL CSS ESTÁ AQUÍ PARA EVITAR PROBLEMAS DE CACHÉ -->
   <style>
@@ -926,5 +928,13 @@
       });
     }
   </script>
+  <script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js")
+    .then(() => console.log("SW registrado"))
+    .catch(err => console.error("Error registrando SW:", err));
+}
+</script>
+
 </body>
 </html>
