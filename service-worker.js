@@ -1,38 +1,63 @@
-const CACHE_NAME = "clientes-ml-v3";
+const CACHE_NAME = "clientes-ml-v4";
 
 const ASSETS = [
-  "./",
-  "index.html",
-  "manifest.json"
-  // Se eliminan "style.css" y "app.js" porque ahora están dentro de index.html
+  "./",
+  "index.html",
+  "manifest.json",
+  "service-worker.js",
+  "icon-192.png",
+  "icon-512.png",
+  "favicon.ico"
 ];
 
+// Install
 self.addEventListener("install", (event) => {
-  // La instalación forzará la descarga de los archivos actualizados.
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-  );
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log("[SW] Cacheando assets...");
+      return cache.addAll(ASSETS);
+    })
+  );
 });
 
+// Activate
 self.addEventListener("activate", (event) => {
-  // Esto elimina todas las cachés anteriores (como clientes-ml-v1)
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k)))
-      )
-    )
-  );
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.map((k) => {
+          if (k !== CACHE_NAME) {
+            console.log("[SW] Borrando cache antiguo:", k);
+            return caches.delete(k);
+          }
+        })
+      )
+    )
+  );
 });
 
+// Fetch
 self.addEventListener("fetch", (event) => {
-  const { request } = event;
+  const req = event.request;
 
-  if (request.method !== "GET") return;
-  if (!request.url.startsWith(self.location.origin)) return;
+  // Solo GET
+  if (req.method !== "GET") return;
 
-  // Cache-First con Network Fallback
-  event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request))
-  );
+  // Solo recursos del mismo dominio
+  if (!req.url.startsWith(self.location.origin)) return;
+
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      return (
+        cached ||
+        fetch(req).then((res) => {
+          // Cachea en segundo plano lo nuevo
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(req, res.clone());
+          });
+          return res;
+        })
+      );
+    })
+  );
 });
