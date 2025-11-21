@@ -1,5 +1,6 @@
 /* === CONFIG GENERAL === */ 
-const API_URL = "https://jolly-dust-2d7a.santamariapablodaniel.workers.dev/";
+const API_URL = "https://cool-hat-bdcf.santamariapablodaniel.workers.dev/";
+
 
 let clienteActual = null;
 
