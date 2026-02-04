@@ -451,6 +451,146 @@
       box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.8);
       transform: translateY(-1px);
     }
+    /* ===== Modal Confirm — MEJORADO ===== */
+
+.modal-card-lg{
+  width: 94%;
+  max-width: 720px; /* más ancho en PC */
+  padding: 1.25rem 1.25rem 1.1rem;
+}
+
+.modal-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.modal-x{
+  border: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: #e5e7eb;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
+.modal-x:active{ transform: scale(0.96); }
+
+.confirm-body{
+  display:flex;
+  flex-direction:column;
+  gap: 0.9rem;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+/* Caja principal del resumen */
+.confirm-hero{
+  padding: 0.9rem;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(148,163,184,0.25);
+}
+
+.confirm-hero .hero-title{
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin-bottom: 0.35rem;
+}
+
+.confirm-hero .hero-sub{
+  color: #cbd5e1;
+  font-size: 0.95rem;
+}
+
+/* Grid ANTES / DESPUÉS */
+.confirm-grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 0.8rem;
+}
+
+@media (min-width: 640px){
+  .confirm-grid{ grid-template-columns: 1fr 1fr; }
+}
+
+.confirm-col{
+  border-radius: 14px;
+  padding: 0.9rem;
+  border: 1px solid rgba(148,163,184,0.25);
+  background: rgba(255,255,255,0.05);
+}
+
+.confirm-col h4{
+  margin: 0 0 0.55rem 0;
+  font-size: 1.05rem;
+  font-weight: 900;
+  display:flex;
+  align-items:center;
+  gap: 0.45rem;
+}
+
+.kv{
+  display:flex;
+  flex-direction:column;
+  gap: 0.35rem;
+  font-size: 0.98rem; /* más grande */
+}
+
+.kv .row{
+  display:flex;
+  gap: 0.5rem;
+  align-items:flex-start;
+}
+
+.kv .k{
+  min-width: 120px;
+  color: #93c5fd;
+  font-weight: 800;
+}
+
+.kv .v{
+  color: #f8fafc;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+/* Chips */
+.tag{
+  display:inline-flex;
+  align-items:center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  border: 1px solid rgba(148,163,184,0.25);
+  background: rgba(255,255,255,0.06);
+}
+
+.tag-ok{ background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.35); }
+.tag-warn{ background: rgba(249,115,22,0.14); border-color: rgba(249,115,22,0.38); }
+.tag-info{ background: rgba(59,130,246,0.14); border-color: rgba(59,130,246,0.38); }
+
+/* Flecha entre columnas (solo visual) */
+.confirm-arrow{
+  display:none;
+}
+@media (min-width: 640px){
+  .confirm-arrow{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size: 1.5rem;
+    opacity: 0.9;
+    margin: -0.35rem 0;
+  }
+}
+
   </style>
 </head>
 <body>
@@ -549,17 +689,24 @@
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
-  <!-- Confirm personalizado -->
-  <div id="confirmOverlay" class="modal-overlay hidden">
-    <div class="modal-card">
+  <!-- Confirm personalizado (MEJORADO) -->
+<div id="confirmOverlay" class="modal-overlay hidden">
+  <div class="modal-card modal-card-lg">
+    <div class="modal-head">
       <h3 id="confirmTitle">Confirmación</h3>
-      <p id="confirmMessage"></p>
-      <div class="modal-buttons">
-        <button id="confirmCancel" class="btn-cancel">Cancelar</button>
-        <button id="confirmOk" class="btn-ok">Aceptar</button>
-      </div>
+      <button id="confirmX" type="button" class="modal-x" aria-label="Cerrar">✕</button>
+    </div>
+
+    <!-- 👇 ahora es DIV para renderizar “tarjetas” -->
+    <div id="confirmMessage" class="confirm-body"></div>
+
+    <div class="modal-buttons">
+      <button id="confirmCancel" class="btn-cancel">Cancelar</button>
+      <button id="confirmOk" class="btn-ok">✅ Confirmar</button>
     </div>
   </div>
+</div>
+
 
   <!-- AHORA TODO EL JS ESTÁ AQUÍ PARA EVITAR PROBLEMAS DE CACHÉ -->
   <script>
@@ -732,7 +879,7 @@
         const vendedorOtroGroup = document.getElementById("vendedorOtroGroup");
         const vendedorOtroInput = document.getElementById("vendedorOtroInput");
 
-        if (["MARTIN", "LUCAS", "OTRO"].includes(vendedorExistente)) {
+        if (["MARTIN", "RAMIRO", "OTRO"].includes(vendedorExistente)) {
             vendedorSelect.value = vendedorExistente;
             vendedorOtroGroup.classList.add("hidden");
             vendedorOtroInput.value = "";
@@ -842,9 +989,32 @@
           nuevo +
           `¿Confirmás?`;
       }
+      const payload = {
+  modo,
+  numero,
+  antes: (modo === "reemplazo" && clienteActual) ? {
+    nombre: clienteActual.nombre || "",
+    apellido: clienteActual.apellido || "",
+    domicilio: clienteActual.domicilio || "",
+    localidad: clienteActual.localidad || "",
+    vendedor: clienteActual.vendedor || "SIN VENDEDOR"
+  } : null,
+  despues: {
+    nombre,
+    apellido,
+    domicilio,
+    localidad,
+    vendedor
+  }
+};
 
-      const ok = await customConfirm("Confirmar acción", mensajeConfirm);
-      if (!ok) return;
+const ok = await customConfirmRich(
+  modo === "nuevo" ? "🆕 Confirmar ALTA" : "♻️ Confirmar CAMBIO",
+  payload
+);
+if (!ok) return;
+
+      
 
       setEstado("Guardando cambios...");
       toggleLoading(true);
@@ -887,47 +1057,142 @@
       }
     }
 
-    /* =========================================================
-      Confirm personalizado — Devuelve Promesa (true / false)
-      ========================================================= */
-    function customConfirm(titulo, mensaje) {
-      return new Promise((resolve) => {
-        const overlay = document.getElementById("confirmOverlay");
-        const msgBox = document.getElementById("confirmMessage");
-        const titleBox = document.getElementById("confirmTitle");
+/* =========================================================
+   Confirm personalizado (RICH) — true / false
+   ========================================================= */
 
-        titleBox.textContent = titulo;
-        msgBox.textContent = mensaje;
-        overlay.classList.remove("hidden");
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
-        const okBtn = document.getElementById("confirmOk");
-        const cancelBtn = document.getElementById("confirmCancel");
+function renderConfirmCambio(payload) {
+  const numero = escapeHtml(payload.numero);
+  const modo = payload.modo;
 
-        function close(result) {
-          overlay.classList.add("hidden");
-          okBtn.removeEventListener("click", okHandler);
-          cancelBtn.removeEventListener("click", cancelHandler);
-          resolve(result);
+  const antes = payload.antes || null;
+  const despues = payload.despues;
+
+  const vAntes = escapeHtml(antes?.vendedor || "SIN VENDEDOR");
+  const vDesp  = escapeHtml(despues?.vendedor || "SIN VENDEDOR");
+
+  const cambioVendedor = (antes && (String(antes?.vendedor || "") !== String(despues?.vendedor || "")));
+
+  const chipVendedor = cambioVendedor
+    ? `<span class="tag tag-warn">🧑‍💼 Cambia vendedor</span>`
+    : `<span class="tag tag-ok">🧑‍💼 Vendedor igual</span>`;
+
+  const chipModo = (modo === "nuevo")
+    ? `<span class="tag tag-info">🆕 Alta nueva</span>`
+    : `<span class="tag tag-info">♻️ Actualización</span>`;
+
+  // Columna “ANTES” solo si es reemplazo
+  const colAntes = (modo === "reemplazo" && antes) ? `
+    <div class="confirm-col">
+      <h4>⬅️ ANTES</h4>
+      <div class="kv">
+        <div class="row"><div class="k">👤 Nombre</div><div class="v">${escapeHtml(antes.nombre)}</div></div>
+        <div class="row"><div class="k">👥 Apellido</div><div class="v">${escapeHtml(antes.apellido || "-")}</div></div>
+        <div class="row"><div class="k">📍 Domicilio</div><div class="v">${escapeHtml(antes.domicilio)}</div></div>
+        <div class="row"><div class="k">🏙️ Localidad</div><div class="v">${escapeHtml(antes.localidad)}</div></div>
+        <div class="row"><div class="k">🧑‍💼 Vendedor</div><div class="v">${vAntes}</div></div>
+      </div>
+    </div>
+  ` : `
+    <div class="confirm-col">
+      <h4>ℹ️ Antes</h4>
+      <div class="kv">
+        <div class="row"><div class="k">📌 Estado</div><div class="v">Este cliente NO existe. Se va a crear.</div></div>
+      </div>
+    </div>
+  `;
+
+  const colDespues = `
+    <div class="confirm-col">
+      <h4>➡️ DESPUÉS</h4>
+      <div class="kv">
+        <div class="row"><div class="k">👤 Nombre</div><div class="v">${escapeHtml(despues.nombre)}</div></div>
+        <div class="row"><div class="k">👥 Apellido</div><div class="v">${escapeHtml(despues.apellido || "-")}</div></div>
+        <div class="row"><div class="k">📍 Domicilio</div><div class="v">${escapeHtml(despues.domicilio)}</div></div>
+        <div class="row"><div class="k">🏙️ Localidad</div><div class="v">${escapeHtml(despues.localidad)}</div></div>
+        <div class="row"><div class="k">🧑‍💼 Vendedor</div><div class="v">${vDesp}</div></div>
+      </div>
+    </div>
+  `;
+
+  return `
+    <div class="confirm-hero">
+      <div class="hero-title">📌 Cliente Nº ${numero}</div>
+      <div class="hero-sub">
+        ${chipModo} &nbsp; ${chipVendedor}
+      </div>
+      <div class="hero-sub" style="margin-top:0.45rem;">
+        ${modo === "nuevo"
+          ? "✅ Vas a CREAR un cliente nuevo."
+          : "⚠️ Vas a REEMPLAZAR datos del cliente existente."
         }
+      </div>
+    </div>
 
-        function okHandler() { close(true); }
-        function cancelHandler() { close(false); }
+    <div class="confirm-grid">
+      ${colAntes}
+      ${colDespues}
+    </div>
 
-        okBtn.addEventListener("click", okHandler);
-        cancelBtn.addEventListener("click", cancelHandler);
+    <div class="confirm-hero">
+      <div class="hero-sub">👀 Revisá “ANTES” y “DESPUÉS”. Si está bien, tocá <b>✅ Confirmar</b>.</div>
+    </div>
+  `;
+}
 
-        overlay.addEventListener("click", (e) => {
-          if (e.target === overlay) close(false);
-        });
+function customConfirmRich(titulo, payload) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById("confirmOverlay");
+    const msgBox = document.getElementById("confirmMessage");
+    const titleBox = document.getElementById("confirmTitle");
 
-        document.addEventListener("keydown", function escHandler(ev) {
-          if (ev.key === "Escape") {
-            document.removeEventListener("keydown", escHandler);
-            close(false);
-          }
-        });
-      });
+    const okBtn = document.getElementById("confirmOk");
+    const cancelBtn = document.getElementById("confirmCancel");
+    const xBtn = document.getElementById("confirmX");
+
+    titleBox.textContent = titulo;
+    msgBox.innerHTML = renderConfirmCambio(payload);
+
+    overlay.classList.remove("hidden");
+
+    function close(result) {
+      overlay.classList.add("hidden");
+      okBtn.removeEventListener("click", okHandler);
+      cancelBtn.removeEventListener("click", cancelHandler);
+      xBtn?.removeEventListener("click", xHandler);
+      resolve(result);
     }
+
+    function okHandler() { close(true); }
+    function cancelHandler() { close(false); }
+    function xHandler() { close(false); }
+
+    okBtn.addEventListener("click", okHandler);
+    cancelBtn.addEventListener("click", cancelHandler);
+    xBtn?.addEventListener("click", xHandler);
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close(false);
+    });
+
+    document.addEventListener("keydown", function escHandler(ev) {
+      if (ev.key === "Escape") {
+        document.removeEventListener("keydown", escHandler);
+        close(false);
+      }
+    });
+  });
+}
+
   </script>
 
 
