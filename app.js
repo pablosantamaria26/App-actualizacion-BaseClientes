@@ -116,6 +116,29 @@ async function buscarCliente() {
     document.getElementById("domicilioInput").value = clienteActual.domicilio || "";
     document.getElementById("localidadInput").value = clienteActual.localidad || "";
 
+    // ✅ NUEVO: cargar vendedor en el selector
+const vendedorSelect = document.getElementById("vendedorSelect");
+const vendedorOtroGroup = document.getElementById("vendedorOtroGroup");
+const vendedorOtroInput = document.getElementById("vendedorOtroInput");
+
+const vend = (clienteActual.vendedor || "").trim();
+
+if (!vend) {
+  // si no tiene vendedor -> mostrar SIN VENDEDOR
+  vendedorSelect.value = "SIN VENDEDOR";
+  vendedorOtroGroup.classList.add("hidden");
+  vendedorOtroInput.value = "";
+} else if (vend === "MARTIN" || vend === "RAMIRO" || vend === "MERCADO LIMPIO") {
+  vendedorSelect.value = vend;
+  vendedorOtroGroup.classList.add("hidden");
+  vendedorOtroInput.value = "";
+} else {
+  vendedorSelect.value = "OTRO";
+  vendedorOtroGroup.classList.remove("hidden");
+  vendedorOtroInput.value = vend;
+}
+
+
     document.getElementById("btnGuardarNuevo").disabled = true;
     document.getElementById("btnReemplazar").disabled = false;
 
@@ -162,9 +185,15 @@ async function guardarCliente(modo) {
   else vendedor = vendedorSel;
 
   if (!vendedor) {
-    showToast("Seleccioná un vendedor", "warn");
-    return;
-  }
+  showToast("Seleccioná un vendedor", "warn");
+  return;
+}
+
+// ✅ NUEVO: si eligen "SIN VENDEDOR", mandamos vendedor vacío
+if (vendedor === "SIN VENDEDOR") {
+  vendedor = "";
+}
+
 
   if (!numero || !nombre || !domicilio || !localidad) {
     showToast("Número, nombre, domicilio y localidad son obligatorios", "warn");
