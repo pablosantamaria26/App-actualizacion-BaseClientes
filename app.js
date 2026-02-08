@@ -12,12 +12,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // === AGREGADO: mostrar campo OTRO vendedor ===
   document.getElementById("vendedorSelect").addEventListener("change", () => {
-    const sel = document.getElementById("vendedorSelect").value;
-    const campo = document.getElementById("vendedorOtroGroup");
+  const sel = document.getElementById("vendedorSelect").value;
+  const campo = document.getElementById("vendedorOtroGroup");
+  const inp = document.getElementById("vendedorOtroInput");
 
-    if (sel === "OTRO") campo.classList.remove("hidden");
-    else campo.classList.add("hidden");
-  });
+  if (sel === "OTRO") {
+    campo.classList.remove("hidden");
+  } else {
+    campo.classList.add("hidden");
+    if (inp) inp.value = ""; // ✅ limpia
+  }
+});
+
 
   btnBuscar.addEventListener("click", buscarCliente);
   numeroInput.addEventListener("keyup", (e) => {
