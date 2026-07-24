@@ -2,1207 +2,797 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Gestor de Clientes — ML</title>
+  <title>Cartera de Clientes — Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0d6efd" />
+  <meta name="theme-color" content="#2563eb" />
   <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
 
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet" />
 
-  <!-- AHORA TODO EL CSS ESTÁ AQUÍ PARA EVITAR PROBLEMAS DE CACHÉ -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } }
+    };
+  </script>
+
   <style>
-    :root {
-      --primary: #0d6efd;
-      --primary-soft: #4dabff;
-      --secondary: #ff7a1a;
-      --bg: #050816;
-      --card-bg: rgba(10, 18, 40, 0.92);
-      --card-bg-contrast: rgba(255, 255, 255, 0.96);
-      --text-main: #f5f5f5;
-      --text-muted: #9ca3af;
-      --border-soft: rgba(148, 163, 184, 0.35);
+    * { font-family: 'Inter', system-ui, sans-serif; }
+    body { -webkit-tap-highlight-color: transparent; }
+    .tabular { font-variant-numeric: tabular-nums; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .tab-btn { transition: all .15s ease; }
+    .tab-btn.active { background: #2563eb; color: #fff; box-shadow: 0 6px 16px -6px rgba(37,99,235,.5); }
+    .tab-btn:not(.active) { background: #fff; color: #475569; border: 1px solid #e2e8f0; }
+
+    .view-tab { display: none; }
+    .view-tab.active { display: block; animation: fadeUp .2s ease-out; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .toast { position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%); padding: .7rem 1.2rem; border-radius: 999px; font-size: .85rem; font-weight: 700; z-index: 9999; color: #fff; box-shadow: 0 12px 30px rgba(0,0,0,.25); transition: opacity .25s, transform .25s; }
+    .toast.info { background: #2563eb; } .toast.success { background: #16a34a; }
+    .toast.warn { background: #d97706; } .toast.error { background: #dc2626; }
+    .toast.hidden { opacity: 0; pointer-events: none; transform: translate(-50%, 10px); }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.55); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 1rem; }
+    .modal-card { width: 100%; max-width: 640px; max-height: 88vh; overflow-y: auto; background: #fff; border-radius: 22px; box-shadow: 0 30px 70px rgba(15,23,42,.35); }
+
+    input[type=text], input[type=number], input[type=search], select {
+      font-family: inherit;
     }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    body {
-      background: var(--bg);
-      color: var(--text-main);
-      min-height: 100vh;
-      position: relative;
-    }
-
-    /* Fondo gradiente */
-    .gradient-bg {
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(circle at 10% 20%, rgba(13, 110, 253, 0.35) 0, transparent 55%),
-        radial-gradient(circle at 90% 80%, rgba(255, 122, 26, 0.35) 0, transparent 55%);
-      opacity: 0.9;
-      pointer-events: none;
-      z-index: -1;
-    }
-
-    /* Header */
-    .app-header {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 1rem 1.2rem;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      backdrop-filter: blur(14px);
-      background: linear-gradient(90deg, rgba(5, 8, 22, 0.9), rgba(5, 8, 22, 0.6));
-      border-bottom: 1px solid rgba(148, 163, 184, 0.3);
-    }
-
-    .logo-circle {
-      width: 42px;
-      height: 42px;
-      border-radius: 999px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(145deg, var(--primary), var(--secondary));
-      font-weight: 700;
-      font-size: 1.1rem;
-      color: white;
-      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.7);
-    }
-
-    .title-block h1 {
-      font-size: 1.25rem;
-      line-height: 1.2;
-    }
-
-    .title-block p {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    /* Main */
-    .app-main {
-      padding: 1.1rem;
-      max-width: 780px;
-      margin: 0 auto 4rem;
-    }
-
-    /* Cards */
-    .card {
-      border-radius: 18px;
-      padding: 1rem 1.1rem 1.3rem;
-      margin-bottom: 1rem;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .card-glass {
-      background: radial-gradient(circle at top left, rgba(13, 110, 253, 0.16), transparent 55%),
-                  radial-gradient(circle at bottom right, rgba(255, 122, 26, 0.18), transparent 55%),
-                  rgba(15, 23, 42, 0.92);
-      border: 1px solid var(--border-soft);
-      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.9);
-    }
-
-    .card-contrast {
-      background: var(--card-bg-contrast);
-      color: #111827;
-      border: 1px solid rgba(156, 163, 175, 0.45);
-    }
-
-    .card-actions {
-      background: rgba(15, 23, 42, 0.95);
-      border: 1px dashed rgba(148, 163, 184, 0.6);
-    }
-
-    .card h2 {
-      font-size: 1.05rem;
-      margin-bottom: 0.75rem;
-    }
-
-    /* Forms */
-    .form-group {
-      margin-bottom: 0.8rem;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 0.85rem;
-      margin-bottom: 0.25rem;
-    }
-
-    .form-group input {
-      width: 100%;
-      padding: 0.6rem 0.7rem;
-      border-radius: 12px;
-      border: 1px solid rgba(148, 163, 184, 0.6);
-      background: rgba(15, 23, 42, 0.85);
-      color: var(--text-main);
-      font-size: 0.9rem;
-      transition: border 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
-    }
-
-    .card-contrast .form-group input {
-      background: white;
-      color: #111827;
-    }
-
-    .form-group input:focus {
-      outline: none;
-      border-color: var(--primary-soft);
-      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.8);
-      transform: translateY(-1px);
-    }
-
-    .help-text {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-top: 0.2rem;
-    }
-
-    .row-inline {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .row-inline input {
-      flex: 1;
-    }
-
-    .form-row-2 {
-      display: flex;
-      gap: 0.7rem;
-      flex-wrap: wrap;
-    }
-
-    .form-row-2 .form-group {
-      flex: 1;
-    }
-
-    /* Buttons */
-    button {
-      border: none;
-      border-radius: 999px;
-      padding: 0.6rem 1rem;
-      font-size: 0.88rem;
-      cursor: pointer;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.25rem;
-      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.15s ease;
-    }
-
-    button:disabled {
-      opacity: 0.4;
-      cursor: default;
-      box-shadow: none;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary), var(--primary-soft));
-      color: white;
-      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.5);
-    }
-
-    .btn-secondary {
-      background: linear-gradient(135deg, var(--secondary), #ffb347);
-      color: #111827;
-      box-shadow: 0 10px 25px rgba(234, 88, 12, 0.4);
-    }
-
-    button:active {
-      transform: translateY(1px) scale(0.97);
-      box-shadow: none;
-    }
-
-    /* Rebote suave */
-    .bounce {
-      animation: float-in 0.4s ease-out;
-    }
-
-    @keyframes float-in {
-      from {
-        opacity: 0;
-        transform: translateY(6px) scale(0.98);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
-    }
-
-    /* Acción group */
-    .button-row {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      margin-top: 0.5rem;
-    }
-
-    @media (min-width: 520px) {
-      .button-row {
-        flex-direction: row;
-      }
-    }
-
-    /* Info actual */
-    .info-actual p {
-      font-size: 0.86rem;
-      margin-bottom: 0.2rem;
-    }
-
-    .info-actual span {
-      font-weight: 600;
-      color: var(--primary);
-    }
-
-    .card-contrast .info-actual span {
-      color: #1d4ed8;
-    }
-
-    .estado-texto {
-      font-size: 0.86rem;
-      color: var(--text-muted);
-    }
-
-    /* Toast */
-    .toast {
-      position: fixed;
-      left: 50%;
-      bottom: 1.5rem;
-      transform: translateX(-50%);
-      padding: 0.7rem 1.2rem;
-      border-radius: 999px;
-      font-size: 0.85rem;
-      z-index: 9999;
-      color: #fff;
-      background: #111827;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
-    }
-
-    .toast-info {
-      background: var(--primary);
-    }
-
-    .toast-success {
-      background: #16a34a;
-    }
-
-    .toast-warn {
-      background: #f97316;
-    }
-
-    .toast-error {
-      background: #dc2626;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    /* Loading overlay */
-    .loading-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.8);
-      backdrop-filter: blur(4px);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-      color: #e5e7eb;
-    }
-
-    .spinner {
-      width: 46px;
-      height: 46px;
-      border-radius: 999px;
-      border: 3px solid rgba(148, 163, 184, 0.4);
-      border-top-color: var(--secondary);
-      border-right-color: var(--primary);
-      animation: spin 0.9s linear infinite;
-      margin-bottom: 0.75rem;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .loading-overlay p {
-      font-size: 0.9rem;
-      color: #e5e7eb;
-    }
-
-    /* Pequeños ajustes responsivos */
-    @media (max-width: 480px) {
-      .title-block h1 {
-        font-size: 1.1rem;
-      }
-    }
-
-    /* ===== Modal Confirm ===== */
-
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.55);
-      backdrop-filter: blur(4px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 99999;
-      animation: fadeIn 0.25s ease-out;
-    }
-
-    .modal-card {
-      width: 90%;
-      max-width: 380px;
-      background: #111827;
-      color: #f1f5f9;
-      padding: 1.5rem;
-      border-radius: 18px;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
-      animation: popIn 0.25s ease-out;
-    }
-
-    .modal-card h3 {
-      margin-top: 0;
-      margin-bottom: 0.7rem;
-      font-size: 1.15rem;
-      color: var(--primary-soft);
-    }
-
-    .modal-buttons {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.6rem;
-      margin-top: 1.3rem;
-    }
-
-    .btn-cancel {
-      padding: 0.55rem 1.1rem;
-      border-radius: 999px;
-      background: #374151;
-      color: #e5e7eb;
-      font-size: 0.85rem;
-    }
-
-    .btn-ok {
-      padding: 0.55rem 1.1rem;
-      border-radius: 999px;
-      background: var(--secondary);
-      color: #111827;
-      font-weight: 600;
-      font-size: 0.85rem;
-    }
-
-    @keyframes popIn {
-      from {
-        opacity: 0;
-        transform: scale(0.9) translateY(10px);
-      }
-      to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-      }
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0 }
-      to { opacity: 1 }
-    }
-
-    /* ESTILOS CLAVE PARA EL SELECTOR Y EL INPUT DE VENDEDOR */
-    #vendedorSelect, #vendedorOtroInput {
-      width: 100%;
-      padding: 0.6rem 0.7rem;
-      border-radius: 12px;
-      border: 1px solid rgba(148, 163, 184, 0.6);
-      background: rgba(15, 23, 42, 0.85);
-      color: var(--text-main);
-      font-size: 0.9rem;
-      /* Asegura que no se comprima */
-      height: auto; 
-      min-height: 40px; 
-    }
-
-    .card-contrast #vendedorSelect,
-    .card-contrast #vendedorOtroInput {
-      background: white;
-      color: #111827;
-    }
-
-    /* ESTILO DE FOCUS */
-    #vendedorSelect:focus,
-    #vendedorOtroInput:focus {
-      outline: none;
-      border-color: var(--primary-soft);
-      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.8);
-      transform: translateY(-1px);
-    }
-    /* ===== Modal Confirm — MEJORADO ===== */
-
-.modal-card-lg{
-  width: 94%;
-  max-width: 720px; /* más ancho en PC */
-  padding: 1.25rem 1.25rem 1.1rem;
-}
-
-.modal-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 0.8rem;
-  margin-bottom: 0.75rem;
-}
-
-.modal-x{
-  border: none;
-  width: 38px;
-  height: 38px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.08);
-  color: #e5e7eb;
-  font-size: 1.05rem;
-  cursor: pointer;
-}
-
-.modal-x:active{ transform: scale(0.96); }
-
-.confirm-body{
-  display:flex;
-  flex-direction:column;
-  gap: 0.9rem;
-  font-size: 0.95rem;
-  line-height: 1.35;
-}
-
-/* Caja principal del resumen */
-.confirm-hero{
-  padding: 0.9rem;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(148,163,184,0.25);
-}
-
-.confirm-hero .hero-title{
-  font-size: 1.05rem;
-  font-weight: 800;
-  margin-bottom: 0.35rem;
-}
-
-.confirm-hero .hero-sub{
-  color: #cbd5e1;
-  font-size: 0.95rem;
-}
-
-/* Grid ANTES / DESPUÉS */
-.confirm-grid{
-  display:grid;
-  grid-template-columns: 1fr;
-  gap: 0.8rem;
-}
-
-@media (min-width: 640px){
-  .confirm-grid{ grid-template-columns: 1fr 1fr; }
-}
-
-.confirm-col{
-  border-radius: 14px;
-  padding: 0.9rem;
-  border: 1px solid rgba(148,163,184,0.25);
-  background: rgba(255,255,255,0.05);
-}
-
-.confirm-col h4{
-  margin: 0 0 0.55rem 0;
-  font-size: 1.05rem;
-  font-weight: 900;
-  display:flex;
-  align-items:center;
-  gap: 0.45rem;
-}
-
-.kv{
-  display:flex;
-  flex-direction:column;
-  gap: 0.35rem;
-  font-size: 0.98rem; /* más grande */
-}
-
-.kv .row{
-  display:flex;
-  gap: 0.5rem;
-  align-items:flex-start;
-}
-
-.kv .k{
-  min-width: 120px;
-  color: #93c5fd;
-  font-weight: 800;
-}
-
-.kv .v{
-  color: #f8fafc;
-  font-weight: 600;
-  word-break: break-word;
-}
-
-/* Chips */
-.tag{
-  display:inline-flex;
-  align-items:center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.55rem;
-  border-radius: 999px;
-  font-weight: 800;
-  font-size: 0.85rem;
-  border: 1px solid rgba(148,163,184,0.25);
-  background: rgba(255,255,255,0.06);
-}
-
-.tag-ok{ background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.35); }
-.tag-warn{ background: rgba(249,115,22,0.14); border-color: rgba(249,115,22,0.38); }
-.tag-info{ background: rgba(59,130,246,0.14); border-color: rgba(59,130,246,0.38); }
-
-/* Flecha entre columnas (solo visual) */
-.confirm-arrow{
-  display:none;
-}
-@media (min-width: 640px){
-  .confirm-arrow{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    font-size: 1.5rem;
-    opacity: 0.9;
-    margin: -0.35rem 0;
-  }
-}
-
+    input[type=number]::-webkit-inner-spin-button { opacity: 1; }
   </style>
 </head>
-<body>
-  <div class="gradient-bg"></div>
+<body class="bg-slate-100 text-slate-900 min-h-screen pb-16">
 
-  <header class="app-header">
-    <div class="logo-circle">ML</div>
-    <div class="title-block">
-      <h1>Gestor de Clientes</h1>
-      <p>Alta y actualización sincronizada — Bases A & B</p>
+  <!-- HEADER -->
+  <header class="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-sm flex-none">ML</div>
+      <div class="min-w-0">
+        <h1 class="text-base font-black leading-tight truncate">Cartera de Clientes</h1>
+        <p class="text-[11px] text-slate-500 font-semibold">Clientes · Descuentos · Vendedores · Migraciones</p>
+      </div>
     </div>
+    <nav class="max-w-5xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
+      <button class="tab-btn active px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap" data-tab="clientes"><i class="fas fa-magnifying-glass mr-1.5"></i>Clientes</button>
+      <button class="tab-btn px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap" data-tab="descuentos"><i class="fas fa-percent mr-1.5"></i>Descuentos</button>
+      <button class="tab-btn px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap" data-tab="vendedores"><i class="fas fa-user-tie mr-1.5"></i>Vendedores</button>
+      <button class="tab-btn px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap" data-tab="migrar"><i class="fas fa-people-arrows mr-1.5"></i>Migrar Cartera</button>
+    </nav>
   </header>
 
-  <main class="app-main">
-    <section class="card card-glass">
-      <h2>Buscar / Crear cliente</h2>
+  <main class="max-w-5xl mx-auto px-4 py-5">
 
-      <div class="form-group">
-        <label for="numeroInput">Número de cliente</label>
-        <div class="row-inline">
-          <input id="numeroInput" type="number" inputmode="numeric" placeholder="Ej: 10001" />
-          <button id="btnBuscar" type="button" class="btn-primary bounce">
-            Buscar
+    <!-- ============ TAB: CLIENTES ============ -->
+    <section id="tab-clientes" class="view-tab active space-y-4">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+        <h2 class="text-sm font-black uppercase tracking-wide text-slate-500 mb-3">Buscar / crear cliente</h2>
+        <div class="flex gap-2">
+          <input id="numeroInput" type="text" inputmode="numeric" placeholder="Número de cliente" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <button id="btnBuscar" class="bg-blue-600 hover:bg-blue-500 text-white font-black px-5 rounded-xl active:scale-95 transition"><i class="fas fa-magnifying-glass"></i></button>
+        </div>
+        <p class="text-[11px] text-slate-400 font-semibold mt-2">Escribí el número y buscá — si no existe, lo podés dar de alta.</p>
+      </div>
+
+      <div id="clienteFormCard" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Nombre / Razón social</label>
+            <input id="nombreInput" type="text" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold" />
+          </div>
+          <div>
+            <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Apellido / referente</label>
+            <input id="apellidoInput" type="text" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Domicilio</label>
+            <input id="domicilioInput" type="text" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold" />
+          </div>
+          <div>
+            <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Localidad</label>
+            <input id="localidadInput" type="text" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold" />
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Vendedor</label>
+          <select id="vendedorSelect" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold">
+            <option value="">Seleccionar vendedor…</option>
+            <option value="SIN VENDEDOR">SIN VENDEDOR</option>
+          </select>
+          <input id="vendedorOtroInput" type="text" placeholder="Nombre del vendedor" class="w-full mt-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold hidden" />
+        </div>
+
+        <div id="descuentoBox" class="hidden bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3">
+          <i class="fas fa-percent text-blue-500"></i>
+          <div class="flex-1">
+            <div class="text-[11px] font-black uppercase tracking-wide text-blue-500">Descuento del cliente</div>
+            <div class="text-[10px] text-blue-400 font-semibold">Lo ve el vendedor en su app de cartera — se guarda aparte, no hace falta reemplazar el resto de los datos.</div>
+          </div>
+          <div class="flex items-center gap-1 flex-none">
+            <input id="descuentoInput" type="number" min="0" max="100" step="0.5" placeholder="0" class="w-20 bg-white border border-blue-300 rounded-lg px-2 py-2 text-sm font-black text-center" />
+            <span class="text-sm font-black text-blue-500">%</span>
+          </div>
+          <button id="btnGuardarDescuento" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-black px-3 py-2.5 rounded-lg active:scale-95">Guardar</button>
+        </div>
+
+        <div id="infoActual" class="hidden text-[11px] font-semibold text-slate-500 bg-slate-50 rounded-xl p-3"></div>
+
+        <div class="flex gap-2 pt-1">
+          <button id="btnGuardarNuevo" type="button" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-3 rounded-xl active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none" disabled>
+            <i class="fas fa-user-plus mr-1.5"></i>Crear cliente
+          </button>
+          <button id="btnReemplazar" type="button" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-black py-3 rounded-xl active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none" disabled>
+            <i class="fas fa-rotate mr-1.5"></i>Reemplazar datos
           </button>
         </div>
-        <small class="help-text">Escribí el número y tocá "Buscar" para ver si ya existe en las bases.</small>
+        <p id="estadoTexto" class="text-[11px] text-slate-400 font-semibold text-center">Buscá un cliente por número para empezar.</p>
       </div>
-
-      <div class="form-row-2">
-        <div class="form-group">
-          <label for="nombreInput">Nombre / Razón Social</label>
-          <input id="nombreInput" type="text" placeholder="Perfumería Rocco" />
-        </div>
-        <div class="form-group">
-          <label for="apellidoInput">Apellido / Referente</label>
-          <input id="apellidoInput" type="text" placeholder="Opcional" />
-        </div>
-      </div>
-
-      <div class="form-row-2">
-        <div class="form-group">
-          <label for="domicilioInput">Domicilio</label>
-          <input id="domicilioInput" type="text" placeholder="Calle y número" />
-        </div>
-        <div class="form-group">
-          <label for="localidadInput">Localidad</label>
-          <input id="localidadInput" type="text" placeholder="Ej: Guernica" />
-        </div>
-      </div>
-
-      <!-- 🔥 AQUÍ ESTÁ EL SELECTOR QUE DEBE SER VISIBLE 🔥 -->
-      <div class="form-group">
-        <label for="vendedorSelect">Vendedor</label>
-        <select id="vendedorSelect">
-  <option value="">Seleccionar vendedor...</option>
-  <option value="SIN VENDEDOR">SIN VENDEDOR</option>
-  <option value="MERCADO LIMPIO">MERCADO LIMPIO</option>
-  <option value="MARTIN">MARTIN</option>
-  <option value="NAHUEL">NAHUEL</option>
-  <option value="OTRO">OTRO</option>
-</select>
-
-
-      <!-- 🔥 CAMPO PARA OTRO VENDEDOR (OCULTO POR DEFECTO) 🔥 -->
-      <div class="form-group hidden" id="vendedorOtroGroup">
-        <label for="vendedorOtroInput">Nombre del vendedor</label>
-        <input id="vendedorOtroInput" type="text" placeholder="Escribí el nombre" />
-      </div>
-      <!-- FIN AGREGADO -->
     </section>
 
-    <section id="infoActualSection" class="card card-contrast hidden">
-      <h2>Cliente actual en las bases</h2>
-      <div id="infoActual" class="info-actual"></div>
+    <!-- ============ TAB: DESCUENTOS (edición masiva) ============ -->
+    <section id="tab-descuentos" class="view-tab space-y-4">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+        <h2 class="text-sm font-black uppercase tracking-wide text-slate-500 mb-3">Editar descuentos de una cartera completa</h2>
+        <div class="flex gap-2">
+          <select id="descVendedorSelect" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold">
+            <option value="">Elegí un vendedor…</option>
+          </select>
+        </div>
+        <p class="text-[11px] text-slate-400 font-semibold mt-2">Se carga toda su cartera. Editá el % que quieras y guardá todo junto — no hace falta buscar cliente por cliente.</p>
+      </div>
+
+      <div id="descTableWrap" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+          <div class="text-xs font-black text-slate-500"><span id="descCount">0</span> clientes</div>
+          <button id="btnGuardarDescuentos" disabled class="bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-black px-4 py-2 rounded-xl active:scale-95 transition">
+            <i class="fas fa-floppy-disk mr-1.5"></i>Guardar cambios (<span id="descDirtyCount">0</span>)
+          </button>
+        </div>
+        <div class="max-h-[65vh] overflow-y-auto">
+          <table class="w-full text-sm">
+            <thead class="sticky top-0 bg-slate-50 text-[10px] font-black uppercase tracking-wide text-slate-400">
+              <tr>
+                <th class="text-left px-4 py-2">Número</th>
+                <th class="text-left px-4 py-2">Cliente</th>
+                <th class="text-left px-4 py-2">Localidad</th>
+                <th class="text-right px-4 py-2">Descuento</th>
+              </tr>
+            </thead>
+            <tbody id="descTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="descEmptyMsg" class="hidden text-center text-sm font-bold text-slate-400 py-10">Este vendedor no tiene clientes asignados.</div>
     </section>
 
-    <section class="card card-actions">
-      <h2>Acciones</h2>
-      <p id="estadoTexto" class="estado-texto">Primero buscá el cliente por número.</p>
+    <!-- ============ TAB: VENDEDORES ============ -->
+    <section id="tab-vendedores" class="view-tab space-y-4">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+        <h2 class="text-sm font-black uppercase tracking-wide text-slate-500 mb-3">Vendedores activos</h2>
+        <div id="vendedoresList" class="space-y-2"></div>
+      </div>
 
-      <div class="button-row">
-        <button id="btnGuardarNuevo" type="button" class="btn-primary bounce" disabled>
-          Guardar como NUEVO cliente
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+        <h2 class="text-sm font-black uppercase tracking-wide text-slate-500 mb-3">Dar de alta un vendedor nuevo</h2>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Nombre</label>
+            <input id="nvNombre" type="text" placeholder="Ej: JUAN" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold uppercase" />
+          </div>
+          <div>
+            <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Usuario (login)</label>
+            <input id="nvUsername" type="text" placeholder="ej: juan" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold" />
+          </div>
+        </div>
+        <div class="mt-3">
+          <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">PIN</label>
+          <div class="flex gap-2 mt-1">
+            <input id="nvPin" type="text" inputmode="numeric" maxlength="4" placeholder="4 dígitos" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-black tracking-widest" />
+            <button id="btnSugerirPin" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-black px-3 rounded-xl">Sugerir</button>
+          </div>
+        </div>
+        <button id="btnCrearVendedor" class="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 rounded-xl active:scale-95 transition">
+          <i class="fas fa-user-plus mr-1.5"></i>Crear vendedor
         </button>
-        <button id="btnReemplazar" type="button" class="btn-secondary bounce" disabled>
-          Reemplazar datos del cliente
+        <p class="text-[11px] text-slate-400 font-semibold mt-2 text-center">Apenas se crea, ya puede loguearse en la app de cartera con usuario y PIN.</p>
+      </div>
+    </section>
+
+    <!-- ============ TAB: MIGRAR CARTERA ============ -->
+    <section id="tab-migrar" class="view-tab space-y-4">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+        <h2 class="text-sm font-black uppercase tracking-wide text-slate-500 mb-3">1. Elegí de dónde migrar</h2>
+        <div id="migOrigenesList" class="grid grid-cols-2 gap-2"></div>
+        <div class="mt-3">
+          <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Filtrar por zona (opcional)</label>
+          <input id="migZona" type="text" placeholder="Ej: Quilmes" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold" />
+        </div>
+        <button id="btnVerClientesMigrar" class="w-full mt-3 bg-slate-800 hover:bg-slate-700 text-white font-black py-2.5 rounded-xl active:scale-95 transition">
+          <i class="fas fa-eye mr-1.5"></i>Ver clientes
+        </button>
+      </div>
+
+      <div id="migPreviewCard" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+        <h2 class="text-sm font-black uppercase tracking-wide text-slate-500">2. Confirmá el destino</h2>
+        <div id="migResumenZonas" class="flex flex-wrap gap-1.5"></div>
+        <div class="max-h-56 overflow-y-auto border border-slate-100 rounded-xl">
+          <table class="w-full text-xs">
+            <tbody id="migTableBody"></tbody>
+          </table>
+        </div>
+        <div>
+          <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Vendedor destino</label>
+          <select id="migDestinoSelect" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold">
+            <option value="">Elegí vendedor…</option>
+          </select>
+        </div>
+        <button id="btnConfirmarMigracion" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-3 rounded-xl active:scale-95 transition">
+          <i class="fas fa-people-arrows mr-1.5"></i>Migrar <span id="migCount">0</span> clientes
         </button>
       </div>
     </section>
+
   </main>
-
-  <!-- Loading -->
-  <div id="loadingOverlay" class="loading-overlay hidden">
-    <div class="spinner"></div>
-    <p>Sincronizando con la nube...</p>
-  </div>
 
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
-  <!-- Confirm personalizado (MEJORADO) -->
-<div id="confirmOverlay" class="modal-overlay hidden">
-  <div class="modal-card modal-card-lg">
-    <div class="modal-head">
-      <h3 id="confirmTitle">Confirmación</h3>
-      <button id="confirmX" type="button" class="modal-x" aria-label="Cerrar">✕</button>
-    </div>
+  <!-- Loading overlay -->
+  <div id="loadingOverlay" class="hidden fixed inset-0 bg-white/70 backdrop-blur-sm z-[9998] flex flex-col items-center justify-center gap-3">
+    <div class="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
+    <p class="text-xs font-black text-slate-500">Trabajando…</p>
+  </div>
 
-    <!-- 👇 ahora es DIV para renderizar “tarjetas” -->
-    <div id="confirmMessage" class="confirm-body"></div>
-
-    <div class="modal-buttons">
-      <button id="confirmCancel" class="btn-cancel">Cancelar</button>
-      <button id="confirmOk" class="btn-ok">✅ Confirmar</button>
+  <!-- Confirm modal (genérico) -->
+  <div id="confirmOverlay" class="modal-overlay hidden">
+    <div class="modal-card p-5">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <h3 id="confirmTitle" class="text-lg font-black">Confirmación</h3>
+        <button id="confirmX" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex-none"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div id="confirmMessage" class="space-y-3 text-sm"></div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button id="confirmCancel" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">Cancelar</button>
+        <button id="confirmOk" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-black text-sm">Confirmar</button>
+      </div>
     </div>
   </div>
-</div>
 
-
-  <!-- AHORA TODO EL JS ESTÁ AQUÍ PARA EVITAR PROBLEMAS DE CACHÉ -->
   <script>
-    /* === CONFIG GENERAL === */
-   const API_URL = "https://cool-hat-bdcf.santamariapablodaniel.workers.dev/";
-
+    /* === CONFIG === */
+    const GESTOR_URL  = "https://cool-hat-bdcf.santamariapablodaniel.workers.dev/";   // getCliente / guardarCliente / migrarCarteraBulk
+    const CARTERA_URL = "https://frosty-term-20ea.santamariapablodaniel.workers.dev/"; // vendedores / descuentos / preview
 
     let clienteActual = null;
+    let vendedoresCache = [];       // [{id,nombre,username,activo}]
+    let carteraCounts = {};         // { NOMBRE: cantidad }
+    let descRows = [];              // filas actuales de la tab Descuentos
+    const descDirty = new Map();    // id -> nuevo descuento
+    let migResultados = [];         // preview de la tab Migrar
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const numeroInput = document.getElementById("numeroInput");
-      const btnBuscar = document.getElementById("btnBuscar");
-      const btnGuardarNuevo = document.getElementById("btnGuardarNuevo");
-      const btnReemplazar = document.getElementById("btnReemplazar");
+    const $ = id => document.getElementById(id);
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-      // === LÓGICA AGREGADA: mostrar campo OTRO vendedor ===
-      const vendedorSelect = document.getElementById("vendedorSelect");
-      const vendedorOtroGroup = document.getElementById("vendedorOtroGroup");
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+    }
 
-      if (vendedorSelect && vendedorOtroGroup) {
-        vendedorSelect.addEventListener("change", () => {
-          const sel = vendedorSelect.value;
-          
-          if (sel === "OTRO") {
-            vendedorOtroGroup.classList.remove("hidden");
-          } else {
-            vendedorOtroGroup.classList.add("hidden");
-            document.getElementById("vendedorOtroInput").value = ""; // Limpiar si cambia
-          }
-        });
+    function showToast(msg, type = "info") {
+      const t = $("toast");
+      t.textContent = msg;
+      t.className = `toast ${type}`;
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => t.classList.add("hidden"), 3200);
+    }
+
+    function toggleLoading(show) { $("loadingOverlay").classList.toggle("hidden", !show); }
+
+    /* === API genérica con reintento ante 429/red === */
+    async function apiPost(url, payload, maxRetries = 3) {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const resp = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+          if (resp.ok) return await resp.json();
+          if (resp.status === 429 && attempt < maxRetries) { await sleep(Math.pow(2, attempt) * 800); continue; }
+          throw new Error("HTTP " + resp.status);
+        } catch (err) {
+          if (attempt < maxRetries) { await sleep(Math.pow(2, attempt) * 800); continue; }
+          throw err;
+        }
       }
+    }
+    const apiGestor  = (payload) => apiPost(GESTOR_URL, payload);
+    const apiCartera = (accion, payload = {}) => apiPost(CARTERA_URL, { accion, ...payload });
 
-
-      btnBuscar.addEventListener("click", buscarCliente);
-      numeroInput.addEventListener("keyup", (e) => {
-        if (e.key === "Enter") buscarCliente();
+    /* === Confirm modal genérico (devuelve Promise<boolean>) === */
+    function confirmModal(titulo, htmlBody) {
+      return new Promise((resolve) => {
+        $("confirmTitle").textContent = titulo;
+        $("confirmMessage").innerHTML = htmlBody;
+        $("confirmOverlay").classList.remove("hidden");
+        const close = (r) => { $("confirmOverlay").classList.add("hidden"); resolve(r); };
+        $("confirmOk").onclick = () => close(true);
+        $("confirmCancel").onclick = () => close(false);
+        $("confirmX").onclick = () => close(false);
       });
+    }
 
-      btnGuardarNuevo.addEventListener("click", () => guardarCliente("nuevo"));
-      btnReemplazar.addEventListener("click", () => guardarCliente("reemplazo"));
+    // Intenta un resumen IA breve; si falla o tarda, cae a un template fijo — nunca bloquea.
+    async function resumenSuave(origenes, zona, destino, count) {
+      const template = `Vas a mover ${count} cliente${count === 1 ? "" : "s"} de ${origenes.join("/")} hacia ${destino}${zona ? " en la zona " + zona : ""}.`;
+      try {
+        const race = Promise.race([
+          apiCartera("resumen_ia_cambio", { origenes, zona, destino, count }),
+          sleep(2500).then(() => null),
+        ]);
+        const res = await race;
+        return (res && res.exito && res.texto) ? res.texto : template;
+      } catch (_) {
+        return template;
+      }
+    }
+
+    /* =========================================================
+       TABS
+       ========================================================= */
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".view-tab").forEach(v => v.classList.remove("active"));
+        btn.classList.add("active");
+        $("tab-" + btn.dataset.tab).classList.add("active");
+      });
     });
 
-    /* === UI Helpers === */
-    function showToast(msg, type = "info") {
-      const toast = document.getElementById("toast");
-      toast.textContent = msg;
-      // Remueve clases previas antes de añadir la nueva
-      toast.className = `toast toast-${type}`;
-      setTimeout(() => {
-        toast.className = "toast hidden";
-      }, 4000);
-    }
-
-    function setEstado(texto) {
-      document.getElementById("estadoTexto").textContent = texto;
-    }
-
-    function limpiarInfoActual() {
-      clienteActual = null;
-      const infoSection = document.getElementById("infoActualSection");
-      const infoDiv = document.getElementById("infoActual");
-
-      infoDiv.innerHTML = "";
-      infoSection.classList.add("hidden");
-
-      document.getElementById("btnGuardarNuevo").disabled = false;
-      document.getElementById("btnReemplazar").disabled = true;
-    }
-
-    function toggleLoading(show) {
-      const overlay = document.getElementById("loadingOverlay");
-      if (show) overlay.classList.remove("hidden");
-      else overlay.classList.add("hidden");
-    }
-
-    // Función auxiliar para esperar
-    function sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    /* === Llamada genérica a la API (via Worker) === */
-    // Se añade lógica de reintento con Retroceso Exponencial para manejar el error 429
-    async function apiPost(payload, maxRetries = 3) {
-      let attempt = 0;
-      while (attempt < maxRetries) {
-        attempt++;
-        
-        try {
-            const resp = await fetch(API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-
-            if (resp.ok) {
-                return await resp.json();
-            }
-
-            // Manejar error 429 (Demasiadas Solicitudes)
-            if (resp.status === 429 && attempt < maxRetries) {
-                // Retroceso exponencial con "jitter" (tiempo aleatorio): 2^intento * 1000ms + random(0-1000ms)
-                const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 1000);
-                console.warn(`[API] Solicitudes excesivas (429). Reintentando en ${Math.round(delay / 1000)}s... Intento ${attempt}/${maxRetries}`);
-                await sleep(delay);
-                continue; // Reintentar el bucle
-            }
-
-            // Manejar otros errores HTTP o 429 después del máximo de reintentos
-            throw new Error("Error HTTP: " + resp.status);
-            
-        } catch (error) {
-            // Manejar errores de red (ej. failed to fetch)
-            if (attempt < maxRetries) {
-                const delay = Math.pow(2, attempt) * 1000 + (Math.random() * 1000);
-                console.warn(`[API] Error de red. Reintentando en ${Math.round(delay / 1000)}s... Intento ${attempt}/${maxRetries}`);
-                await sleep(delay);
-                continue; // Reintentar el bucle
-            }
-            throw error; // Relanzar el error si es el último intento
-        }
-      }
-    }
-
-    /* === Buscar cliente por número === */
-    async function buscarCliente() {
-      const numero = document.getElementById("numeroInput").value.trim();
-
-      if (!numero) {
-        showToast("Ingresá un número de cliente", "warn");
-        return;
-      }
-
-      setEstado("Buscando cliente...");
-      limpiarInfoActual();
-      toggleLoading(true);
-
+    /* =========================================================
+       CARGA INICIAL — vendedores + carteras (para todos los tabs)
+       ========================================================= */
+    async function cargarVendedores() {
       try {
-        const data = await apiPost({
-          action: "getCliente",
-          numero,
-        });
+        const res = await apiCartera("listar_vendedores");
+        vendedoresCache = (res.vendedores || []).filter(v => v.activo);
+      } catch (e) {
+        console.error(e);
+        vendedoresCache = [];
+      }
+      poblarSelectsVendedor();
+      renderVendedoresList();
+      renderMigOrigenes();
 
+      // Conteo de cartera por vendedor — un solo preview_cartera con todos
+      const nombresParaCartera = vendedoresCache.filter(v => v.username !== "admin").map(v => v.nombre);
+      if (nombresParaCartera.length) {
+        try {
+          const prev = await apiCartera("preview_cartera", { vendedores: nombresParaCartera });
+          carteraCounts = {};
+          (prev.clientes || []).forEach(c => { carteraCounts[c.vendedor] = (carteraCounts[c.vendedor] || 0) + 1; });
+        } catch (_) { carteraCounts = {}; }
+      }
+      renderVendedoresList();
+    }
+
+    function poblarSelectsVendedor() {
+      const nombres = vendedoresCache.filter(v => v.username !== "admin").map(v => v.nombre);
+
+      // Tab Clientes
+      const sel = $("vendedorSelect");
+      sel.innerHTML = `<option value="">Seleccionar vendedor…</option><option value="SIN VENDEDOR">SIN VENDEDOR</option>` +
+        nombres.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("") +
+        `<option value="OTRO">OTRO</option>`;
+
+      // Tab Descuentos
+      $("descVendedorSelect").innerHTML = `<option value="">Elegí un vendedor…</option>` +
+        nombres.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
+
+      // Tab Migrar — destino
+      $("migDestinoSelect").innerHTML = `<option value="">Elegí vendedor…</option>` +
+        nombres.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
+    }
+
+    function renderVendedoresList() {
+      const box = $("vendedoresList");
+      if (!vendedoresCache.length) { box.innerHTML = `<p class="text-sm text-slate-400 font-semibold">Sin vendedores cargados.</p>`; return; }
+      box.innerHTML = vendedoresCache.map(v => `
+        <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50">
+          <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-black text-xs flex-none">${escapeHtml(v.nombre.slice(0,2))}</div>
+          <div class="min-w-0 flex-1">
+            <div class="font-black text-sm truncate">${escapeHtml(v.nombre)}</div>
+            <div class="text-[11px] text-slate-400 font-semibold">usuario: ${escapeHtml(v.username)}</div>
+          </div>
+          <div class="text-right flex-none">
+            <div class="font-black text-sm tabular">${carteraCounts[v.nombre] ?? "—"}</div>
+            <div class="text-[9px] font-black uppercase text-slate-400">clientes</div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderMigOrigenes() {
+      const box = $("migOrigenesList");
+      const nombres = vendedoresCache.filter(v => v.username !== "admin");
+      box.innerHTML = nombres.map(v => `
+        <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold cursor-pointer">
+          <input type="checkbox" class="mig-origen-chk w-4 h-4" value="${escapeHtml(v.nombre)}"> ${escapeHtml(v.nombre)}
+        </label>
+      `).join("");
+    }
+
+    /* =========================================================
+       TAB CLIENTES
+       ========================================================= */
+    function limpiarFormCliente() {
+      clienteActual = null;
+      ["nombreInput","apellidoInput","domicilioInput","localidadInput"].forEach(id => $(id).value = "");
+      $("vendedorSelect").value = "";
+      $("vendedorOtroInput").value = "";
+      $("vendedorOtroInput").classList.add("hidden");
+      $("descuentoBox").classList.add("hidden");
+      $("descuentoInput").value = "";
+      $("infoActual").classList.add("hidden");
+      $("btnGuardarNuevo").disabled = false;
+      $("btnReemplazar").disabled = true;
+    }
+
+    $("vendedorSelect").addEventListener("change", () => {
+      $("vendedorOtroInput").classList.toggle("hidden", $("vendedorSelect").value !== "OTRO");
+    });
+
+    $("btnBuscar").addEventListener("click", buscarCliente);
+    $("numeroInput").addEventListener("keyup", e => { if (e.key === "Enter") buscarCliente(); });
+
+    async function buscarCliente() {
+      const numero = $("numeroInput").value.trim();
+      if (!numero) return showToast("Ingresá un número de cliente", "warn");
+
+      limpiarFormCliente();
+      $("estadoTexto").textContent = "Buscando…";
+      toggleLoading(true);
+      try {
+        const data = await apiGestor({ action: "getCliente", numero });
         toggleLoading(false);
 
-        if (!data.ok) {
-          showToast(data.error || "Error en la búsqueda", "error");
-          setEstado("Error al buscar el cliente.");
-          return;
-        }
+        if (!data.ok) return showToast(data.error || "Error en la búsqueda", "error");
 
         if (!data.found) {
-          setEstado("Cliente no encontrado. Podés guardarlo como nuevo.");
-          document.getElementById("btnGuardarNuevo").disabled = false;
-          document.getElementById("btnReemplazar").disabled = true;
-          showToast("Número libre. Es un cliente nuevo.", "info");
+          $("estadoTexto").textContent = "Cliente no encontrado — podés crearlo.";
+          showToast("Número libre: es un cliente nuevo", "info");
           return;
         }
 
         clienteActual = data.cliente;
-        mostrarClienteActual(clienteActual);
+        $("nombreInput").value = clienteActual.nombre || "";
+        $("apellidoInput").value = clienteActual.apellido || "";
+        $("domicilioInput").value = clienteActual.domicilio || "";
+        $("localidadInput").value = clienteActual.localidad || "";
 
-        document.getElementById("nombreInput").value = clienteActual.nombre || "";
-        document.getElementById("apellidoInput").value = clienteActual.apellido || "";
-        document.getElementById("domicilioInput").value = clienteActual.domicilio || "";
-        document.getElementById("localidadInput").value = clienteActual.localidad || "";
-        
-        // Actualiza el selector de vendedor si el cliente ya lo tiene
-        const vendedorExistente = clienteActual.vendedor || "";
-        const vendedorSelect = document.getElementById("vendedorSelect");
-        const vendedorOtroGroup = document.getElementById("vendedorOtroGroup");
-        const vendedorOtroInput = document.getElementById("vendedorOtroInput");
-
-        if (["MARTIN", "NAHUEL", "OTRO"].includes(vendedorExistente)) {
-            vendedorSelect.value = vendedorExistente;
-            vendedorOtroGroup.classList.add("hidden");
-            vendedorOtroInput.value = "";
-        } else if (vendedorExistente) {
-            // El vendedor no está en la lista predefinida
-            vendedorSelect.value = "OTRO";
-            vendedorOtroGroup.classList.remove("hidden");
-            vendedorOtroInput.value = vendedorExistente;
+        const nombresConocidos = vendedoresCache.filter(v => v.username !== "admin").map(v => v.nombre);
+        const vExistente = (clienteActual.vendedor || "").trim();
+        if (!vExistente) {
+          $("vendedorSelect").value = "SIN VENDEDOR";
+          $("vendedorOtroInput").classList.add("hidden");
+        } else if (nombresConocidos.includes(vExistente)) {
+          $("vendedorSelect").value = vExistente;
+          $("vendedorOtroInput").classList.add("hidden");
         } else {
-            // No tiene vendedor
-            vendedorSelect.value = "";
-            vendedorOtroGroup.classList.add("hidden");
-            vendedorOtroInput.value = "";
+          $("vendedorSelect").value = "OTRO";
+          $("vendedorOtroInput").classList.remove("hidden");
+          $("vendedorOtroInput").value = vExistente;
         }
 
+        $("infoActual").classList.remove("hidden");
+        $("infoActual").innerHTML = `Cliente #${escapeHtml(numero)} — vendedor actual: <b>${escapeHtml(vExistente || "sin asignar")}</b>`;
 
-        document.getElementById("btnGuardarNuevo").disabled = true;
-        document.getElementById("btnReemplazar").disabled = false;
+        $("btnGuardarNuevo").disabled = true;
+        $("btnReemplazar").disabled = false;
+        $("estadoTexto").textContent = "Cliente encontrado — podés actualizarlo.";
 
-        setEstado("El número ya existe. Podés actualizarlo.");
-        showToast("Cliente encontrado.", "success");
+        // Descuento — carga aparte vía Supabase (frosty-term-20ea)
+        $("descuentoBox").classList.remove("hidden");
+        try {
+          const lk = await apiCartera("preview_cartera", { vendedores: [vExistente || "SIN VENDEDOR"] });
+          const cli = (lk.clientes || []).find(c => String(c.id) === String(numero));
+          $("descuentoInput").value = (cli && cli.descuento != null) ? cli.descuento : "";
+        } catch (_) { /* silencioso */ }
 
       } catch (err) {
-        console.error(err);
         toggleLoading(false);
         showToast("Error al conectar con el servidor", "error");
-        setEstado("Error de conexión con la API.");
       }
     }
 
-    function mostrarClienteActual(cli) {
-      const infoSection = document.getElementById("infoActualSection");
-      const infoDiv = document.getElementById("infoActual");
-      
-      // Agregado: Muestra también el vendedor actual si existe
-      const vendedorHtml = cli.vendedor ? `<p><span>Vendedor:</span> ${cli.vendedor}</p>` : '';
-
-      infoDiv.innerHTML = `
-        <p><span>Número:</span> ${cli.numero}</p>
-        <p><span>Nombre:</span> ${cli.nombre}</p>
-        <p><span>Apellido:</span> ${cli.apellido}</p>
-        <p><span>Domicilio:</span> ${cli.domicilio}</p>
-        <p><span>Localidad:</span> ${cli.localidad}</p>
-        ${vendedorHtml}
-      `;
-
-      infoSection.classList.remove("hidden");
-    }
-
-    /* === Guardar cliente (nuevo o reemplazo) === */
-    async function guardarCliente(modo) {
-      const numero = document.getElementById("numeroInput").value.trim();
-      const nombre = document.getElementById("nombreInput").value.trim();
-      const apellido = document.getElementById("apellidoInput").value.trim();
-      const domicilio = document.getElementById("domicilioInput").value.trim();
-      const localidad = document.getElementById("localidadInput").value.trim();
-
-      const vendedorSel = document.getElementById("vendedorSelect").value;
-      const vendedorOtro = document.getElementById("vendedorOtroInput").value.trim();
-
-      // === VALIDACIÓN VENDEDOR ===
-      let vendedor = "";
-      if (vendedorSel === "OTRO") vendedor = vendedorOtro;
-      else vendedor = vendedorSel;
-
-      if (!vendedor) {
-        showToast("Seleccioná un vendedor", "warn");
-        return;
-      }
-
-      if (!numero || !nombre || !domicilio || !localidad) {
-        showToast("Número, nombre, domicilio y localidad son obligatorios", "warn");
-        return;
-      }
-
-      let mensajeConfirm = "";
-
-      if (modo === "nuevo") {
-        mensajeConfirm =
-          `Se va a CREAR el cliente ${numero}.\n\n` +
-          `Nombre: ${nombre}\n` +
-          `Domicilio: ${domicilio}\n` +
-          `Localidad: ${localidad}\n` +
-          `Vendedor: ${vendedor}\n\n` +
-          `¿Confirmás?`;
-      } else {
-        let viejo = "";
-        if (clienteActual) {
-          viejo =
-            `ACTUAL:\n` +
-            `Nombre: ${clienteActual.nombre}\n` +
-            `Domicilio: ${clienteActual.domicilio}\n` +
-            `Localidad: ${clienteActual.localidad}\n` +
-            `Vendedor: ${clienteActual.vendedor || 'N/A'}\n\n`; // Muestra vendedor viejo
-        }
-
-        const nuevo =
-          `NUEVO:\n` +
-          `Nombre: ${nombre}\n` +
-          `Domicilio: ${domicilio}\n` +
-          `Localidad: ${localidad}\n` +
-          `Vendedor: ${vendedor}\n\n`;
-
-        mensajeConfirm =
-          `Se van a REEMPLAZAR los datos del cliente ${numero}.\n\n` +
-          viejo +
-          nuevo +
-          `¿Confirmás?`;
-      }
-      const payload = {
-  modo,
-  numero,
-  antes: (modo === "reemplazo" && clienteActual) ? {
-    nombre: clienteActual.nombre || "",
-    apellido: clienteActual.apellido || "",
-    domicilio: clienteActual.domicilio || "",
-    localidad: clienteActual.localidad || "",
-    vendedor: clienteActual.vendedor || "SIN VENDEDOR"
-  } : null,
-  despues: {
-    nombre,
-    apellido,
-    domicilio,
-    localidad,
-    vendedor
-  }
-};
-
-const ok = await customConfirmRich(
-  modo === "nuevo" ? "🆕 Confirmar ALTA" : "♻️ Confirmar CAMBIO",
-  payload
-);
-if (!ok) return;
-
-      
-
-      setEstado("Guardando cambios...");
+    $("btnGuardarDescuento").addEventListener("click", async () => {
+      if (!clienteActual) return;
+      const v = $("descuentoInput").value.trim();
       toggleLoading(true);
-
       try {
-        const data = await apiPost({
-          action: "guardarCliente",
-          modo,
-          numero,
-          nombre,
-          apellido,
-          domicilio,
-          localidad,
-          vendedor // <=== ENVÍO DEL VENDEDOR NUEVO
-        });
-
+        const res = await apiCartera("set_descuento", { clienteId: $("numeroInput").value.trim(), descuento: v === "" ? null : Number(v) });
         toggleLoading(false);
+        if (res.exito) showToast("Descuento guardado", "success");
+        else showToast("No se pudo guardar el descuento", "error");
+      } catch (e) {
+        toggleLoading(false);
+        showToast("Error guardando descuento", "error");
+      }
+    });
 
-        if (!data.ok) {
-          showToast(data.error || "Error al guardar", "error");
-          setEstado("Hubo un problema al guardar.");
-          return;
-        }
+    $("btnGuardarNuevo").addEventListener("click", () => guardarCliente("nuevo"));
+    $("btnReemplazar").addEventListener("click", () => guardarCliente("reemplazo"));
 
-        showToast(data.message || "Cliente guardado correctamente", "success");
-        setEstado(
-          modo === "nuevo"
-            ? "Cliente creado en ambas bases."
-            : "Cliente actualizado en ambas bases."
-        );
+    async function guardarCliente(modo) {
+      const numero = $("numeroInput").value.trim();
+      const nombre = $("nombreInput").value.trim();
+      const apellido = $("apellidoInput").value.trim();
+      const domicilio = $("domicilioInput").value.trim();
+      const localidad = $("localidadInput").value.trim();
+      const vSel = $("vendedorSelect").value;
+      const vOtro = $("vendedorOtroInput").value.trim();
+      const vendedor = vSel === "OTRO" ? vOtro : vSel;
 
-        // Volver a buscar para actualizar la UI con los nuevos datos
+      if (!vendedor) return showToast("Seleccioná un vendedor", "warn");
+      if (!numero || !nombre || !domicilio || !localidad) return showToast("Número, nombre, domicilio y localidad son obligatorios", "warn");
+
+      const cambiaVendedor = clienteActual && String(clienteActual.vendedor || "").trim() !== vendedor;
+      const html = `
+        <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+          <div class="text-[11px] font-black uppercase text-slate-400 mb-1">Cliente #${escapeHtml(numero)}</div>
+          <div class="text-sm font-bold">${escapeHtml(nombre)} ${escapeHtml(apellido)}</div>
+          <div class="text-xs text-slate-500 font-semibold">${escapeHtml(domicilio)} · ${escapeHtml(localidad)}</div>
+        </div>
+        <div class="flex items-center gap-2 text-sm font-bold ${cambiaVendedor ? 'text-amber-600' : 'text-slate-600'}">
+          <i class="fas ${cambiaVendedor ? 'fa-triangle-exclamation' : 'fa-check'}"></i>
+          Vendedor: ${escapeHtml(vendedor)} ${cambiaVendedor ? '(cambia)' : ''}
+        </div>
+        <p class="text-xs text-slate-400">${modo === 'nuevo' ? 'Se va a crear este cliente.' : 'Se van a reemplazar sus datos.'}</p>
+      `;
+      const ok = await confirmModal(modo === "nuevo" ? "Confirmar alta" : "Confirmar cambio", html);
+      if (!ok) return;
+
+      toggleLoading(true);
+      try {
+        const data = await apiGestor({ action: "guardarCliente", modo, numero, nombre, apellido, domicilio, localidad, vendedor });
+        toggleLoading(false);
+        if (!data.ok) return showToast(data.error || "Error al guardar", "error");
+        showToast(data.message || "Guardado correctamente", "success");
         buscarCliente();
-
       } catch (err) {
-        console.error(err);
         toggleLoading(false);
         showToast("Error de conexión al guardar", "error");
-        setEstado("Error de conexión con la API.");
       }
     }
 
-/* =========================================================
-   Confirm personalizado (RICH) — true / false
-   ========================================================= */
+    /* =========================================================
+       TAB DESCUENTOS — edición masiva
+       ========================================================= */
+    $("descVendedorSelect").addEventListener("change", cargarDescuentosVendedor);
 
-function escapeHtml(str) {
-  return String(str ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
+    async function cargarDescuentosVendedor() {
+      const vendedor = $("descVendedorSelect").value;
+      descDirty.clear();
+      updateDescGuardarBtn();
+      if (!vendedor) { $("descTableWrap").classList.add("hidden"); $("descEmptyMsg").classList.add("hidden"); return; }
 
-function renderConfirmCambio(payload) {
-  const numero = escapeHtml(payload.numero);
-  const modo = payload.modo;
+      toggleLoading(true);
+      try {
+        const res = await apiCartera("preview_cartera", { vendedores: [vendedor] });
+        descRows = (res.clientes || []).sort((a, b) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true }));
+      } catch (e) {
+        descRows = [];
+        showToast("No se pudo cargar la cartera", "error");
+      }
+      toggleLoading(false);
 
-  const antes = payload.antes || null;
-  const despues = payload.despues;
+      if (!descRows.length) {
+        $("descTableWrap").classList.add("hidden");
+        $("descEmptyMsg").classList.remove("hidden");
+        return;
+      }
+      $("descEmptyMsg").classList.add("hidden");
+      $("descTableWrap").classList.remove("hidden");
+      $("descCount").textContent = descRows.length;
+      renderDescTable();
+    }
 
-  const vAntes = escapeHtml(antes?.vendedor || "SIN VENDEDOR");
-  const vDesp  = escapeHtml(despues?.vendedor || "SIN VENDEDOR");
+    function renderDescTable() {
+      $("descTableBody").innerHTML = descRows.map(c => `
+        <tr class="border-t border-slate-100">
+          <td class="px-4 py-2 font-black tabular text-sm">#${escapeHtml(String(c.id))}</td>
+          <td class="px-4 py-2 text-slate-700 font-semibold truncate max-w-[160px]">${escapeHtml([c.nombre, c.apellido].filter(Boolean).join(" ") || "—")}</td>
+          <td class="px-4 py-2 text-slate-400 font-semibold">${escapeHtml(c.localidad || "—")}</td>
+          <td class="px-4 py-2 text-right">
+            <input type="number" min="0" max="100" step="0.5" data-id="${escapeHtml(String(c.id))}"
+              value="${c.descuento != null ? c.descuento : ''}" placeholder="0"
+              class="desc-input w-20 text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-black" />
+          </td>
+        </tr>
+      `).join("");
 
-  const cambioVendedor = (antes && (String(antes?.vendedor || "") !== String(despues?.vendedor || "")));
+      document.querySelectorAll(".desc-input").forEach(inp => {
+        const original = descRows.find(c => String(c.id) === inp.dataset.id)?.descuento ?? null;
+        inp.addEventListener("input", () => {
+          const val = inp.value.trim();
+          const num = val === "" ? null : Number(val);
+          if (String(num) === String(original)) descDirty.delete(inp.dataset.id);
+          else descDirty.set(inp.dataset.id, num);
+          updateDescGuardarBtn();
+        });
+      });
+    }
 
-  const chipVendedor = cambioVendedor
-    ? `<span class="tag tag-warn">🧑‍💼 Cambia vendedor</span>`
-    : `<span class="tag tag-ok">🧑‍💼 Vendedor igual</span>`;
+    function updateDescGuardarBtn() {
+      const n = descDirty.size;
+      $("descDirtyCount").textContent = n;
+      $("btnGuardarDescuentos").disabled = n === 0;
+    }
 
-  const chipModo = (modo === "nuevo")
-    ? `<span class="tag tag-info">🆕 Alta nueva</span>`
-    : `<span class="tag tag-info">♻️ Actualización</span>`;
+    $("btnGuardarDescuentos").addEventListener("click", async () => {
+      if (!descDirty.size) return;
+      const cambios = Array.from(descDirty.entries()).map(([id, descuento]) => ({ id, descuento }));
+      const rowsHtml = cambios.slice(0, 12).map(c => `
+        <div class="flex justify-between text-sm py-1 border-b border-slate-100">
+          <span class="font-black tabular">#${escapeHtml(c.id)}</span>
+          <span class="font-bold text-blue-600">${c.descuento == null ? 'sin descuento' : c.descuento + '%'}</span>
+        </div>`).join("");
+      const extra = cambios.length > 12 ? `<p class="text-xs text-slate-400 mt-1">+ ${cambios.length - 12} más…</p>` : "";
+      const vendedor = $("descVendedorSelect").value;
 
-  // Columna “ANTES” solo si es reemplazo
-  const colAntes = (modo === "reemplazo" && antes) ? `
-    <div class="confirm-col">
-      <h4>⬅️ ANTES</h4>
-      <div class="kv">
-        <div class="row"><div class="k">👤 Nombre</div><div class="v">${escapeHtml(antes.nombre)}</div></div>
-        <div class="row"><div class="k">👥 Apellido</div><div class="v">${escapeHtml(antes.apellido || "-")}</div></div>
-        <div class="row"><div class="k">📍 Domicilio</div><div class="v">${escapeHtml(antes.domicilio)}</div></div>
-        <div class="row"><div class="k">🏙️ Localidad</div><div class="v">${escapeHtml(antes.localidad)}</div></div>
-        <div class="row"><div class="k">🧑‍💼 Vendedor</div><div class="v">${vAntes}</div></div>
-      </div>
-    </div>
-  ` : `
-    <div class="confirm-col">
-      <h4>ℹ️ Antes</h4>
-      <div class="kv">
-        <div class="row"><div class="k">📌 Estado</div><div class="v">Este cliente NO existe. Se va a crear.</div></div>
-      </div>
-    </div>
-  `;
+      const resumen = await resumenSuave([vendedor], "", "descuentos actualizados", cambios.length);
+      const html = `<p class="text-sm font-semibold text-slate-600">${escapeHtml(resumen)}</p><div class="max-h-48 overflow-y-auto">${rowsHtml}${extra}</div>`;
+      const ok = await confirmModal(`Guardar ${cambios.length} cambios`, html);
+      if (!ok) return;
 
-  const colDespues = `
-    <div class="confirm-col">
-      <h4>➡️ DESPUÉS</h4>
-      <div class="kv">
-        <div class="row"><div class="k">👤 Nombre</div><div class="v">${escapeHtml(despues.nombre)}</div></div>
-        <div class="row"><div class="k">👥 Apellido</div><div class="v">${escapeHtml(despues.apellido || "-")}</div></div>
-        <div class="row"><div class="k">📍 Domicilio</div><div class="v">${escapeHtml(despues.domicilio)}</div></div>
-        <div class="row"><div class="k">🏙️ Localidad</div><div class="v">${escapeHtml(despues.localidad)}</div></div>
-        <div class="row"><div class="k">🧑‍💼 Vendedor</div><div class="v">${vDesp}</div></div>
-      </div>
-    </div>
-  `;
-
-  return `
-    <div class="confirm-hero">
-      <div class="hero-title">📌 Cliente Nº ${numero}</div>
-      <div class="hero-sub">
-        ${chipModo} &nbsp; ${chipVendedor}
-      </div>
-      <div class="hero-sub" style="margin-top:0.45rem;">
-        ${modo === "nuevo"
-          ? "✅ Vas a CREAR un cliente nuevo."
-          : "⚠️ Vas a REEMPLAZAR datos del cliente existente."
+      toggleLoading(true);
+      try {
+        const res = await apiCartera("set_descuentos_bulk", { cambios });
+        toggleLoading(false);
+        if (res.exito) {
+          showToast(`${res.actualizados} descuentos guardados`, "success");
+          descDirty.clear();
+          cargarDescuentosVendedor();
+        } else {
+          showToast("No se pudo guardar", "error");
         }
-      </div>
-    </div>
-
-    <div class="confirm-grid">
-      ${colAntes}
-      ${colDespues}
-    </div>
-
-    <div class="confirm-hero">
-      <div class="hero-sub">👀 Revisá “ANTES” y “DESPUÉS”. Si está bien, tocá <b>✅ Confirmar</b>.</div>
-    </div>
-  `;
-}
-
-function customConfirmRich(titulo, payload) {
-  return new Promise((resolve) => {
-    const overlay = document.getElementById("confirmOverlay");
-    const msgBox = document.getElementById("confirmMessage");
-    const titleBox = document.getElementById("confirmTitle");
-
-    const okBtn = document.getElementById("confirmOk");
-    const cancelBtn = document.getElementById("confirmCancel");
-    const xBtn = document.getElementById("confirmX");
-
-    titleBox.textContent = titulo;
-    msgBox.innerHTML = renderConfirmCambio(payload);
-
-    overlay.classList.remove("hidden");
-
-    function close(result) {
-      overlay.classList.add("hidden");
-      okBtn.removeEventListener("click", okHandler);
-      cancelBtn.removeEventListener("click", cancelHandler);
-      xBtn?.removeEventListener("click", xHandler);
-      resolve(result);
-    }
-
-    function okHandler() { close(true); }
-    function cancelHandler() { close(false); }
-    function xHandler() { close(false); }
-
-    okBtn.addEventListener("click", okHandler);
-    cancelBtn.addEventListener("click", cancelHandler);
-    xBtn?.addEventListener("click", xHandler);
-
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) close(false);
-    });
-
-    document.addEventListener("keydown", function escHandler(ev) {
-      if (ev.key === "Escape") {
-        document.removeEventListener("keydown", escHandler);
-        close(false);
+      } catch (e) {
+        toggleLoading(false);
+        showToast("Error de conexión al guardar", "error");
       }
     });
-  });
-}
 
+    /* =========================================================
+       TAB VENDEDORES — alta
+       ========================================================= */
+    $("btnSugerirPin").addEventListener("click", () => {
+      $("nvPin").value = String(Math.floor(1000 + Math.random() * 9000));
+    });
+
+    $("btnCrearVendedor").addEventListener("click", async () => {
+      const nombre = $("nvNombre").value.trim().toUpperCase();
+      const username = $("nvUsername").value.trim().toLowerCase();
+      const pin = $("nvPin").value.trim();
+      if (!nombre || !username || !pin) return showToast("Completá nombre, usuario y PIN", "warn");
+
+      const html = `
+        <p class="text-sm text-slate-600">Se va a crear un login nuevo:</p>
+        <div class="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1 text-sm font-bold">
+          <div>Nombre: ${escapeHtml(nombre)}</div>
+          <div>Usuario: ${escapeHtml(username)}</div>
+          <div>PIN: ${escapeHtml(pin)}</div>
+        </div>
+        <p class="text-xs text-slate-400">Ya va a poder entrar a la app de cartera con estas credenciales, aunque todavía no tenga clientes asignados.</p>
+      `;
+      const ok = await confirmModal("Confirmar alta de vendedor", html);
+      if (!ok) return;
+
+      toggleLoading(true);
+      try {
+        const res = await apiCartera("crear_vendedor", { nombre, username, pin });
+        toggleLoading(false);
+        if (!res.exito) return showToast(res.error || "No se pudo crear (¿usuario duplicado?)", "error");
+        showToast(`Vendedor ${nombre} creado`, "success");
+        $("nvNombre").value = ""; $("nvUsername").value = ""; $("nvPin").value = "";
+        cargarVendedores();
+      } catch (e) {
+        toggleLoading(false);
+        showToast("Error de conexión al crear vendedor", "error");
+      }
+    });
+
+    /* =========================================================
+       TAB MIGRAR CARTERA
+       ========================================================= */
+    $("btnVerClientesMigrar").addEventListener("click", async () => {
+      const origenes = Array.from(document.querySelectorAll(".mig-origen-chk:checked")).map(c => c.value);
+      if (!origenes.length) return showToast("Elegí al menos un vendedor de origen", "warn");
+      const zona = $("migZona").value.trim();
+
+      toggleLoading(true);
+      try {
+        const res = await apiCartera("preview_cartera", { vendedores: origenes });
+        let clientes = res.clientes || [];
+        if (zona) {
+          const zUp = zona.toUpperCase();
+          clientes = clientes.filter(c => String(c.localidad || "").toUpperCase().includes(zUp));
+        }
+        migResultados = clientes;
+      } catch (e) {
+        migResultados = [];
+        showToast("No se pudo cargar la vista previa", "error");
+      }
+      toggleLoading(false);
+
+      if (!migResultados.length) {
+        showToast("No hay clientes que coincidan con ese filtro", "warn");
+        $("migPreviewCard").classList.add("hidden");
+        return;
+      }
+
+      // Resumen por zona
+      const porZona = {};
+      migResultados.forEach(c => { const z = c.localidad || "Sin zona"; porZona[z] = (porZona[z] || 0) + 1; });
+      $("migResumenZonas").innerHTML = Object.entries(porZona)
+        .sort((a, b) => b[1] - a[1])
+        .map(([z, n]) => `<span class="text-[11px] font-black bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">${escapeHtml(z)} · ${n}</span>`)
+        .join("");
+
+      $("migTableBody").innerHTML = migResultados.slice(0, 60).map(c => `
+        <tr class="border-t border-slate-100">
+          <td class="px-3 py-1.5 font-black tabular">#${escapeHtml(String(c.id))}</td>
+          <td class="px-3 py-1.5 text-slate-600 font-semibold truncate max-w-[140px]">${escapeHtml([c.nombre, c.apellido].filter(Boolean).join(" ") || "—")}</td>
+          <td class="px-3 py-1.5 text-slate-400 font-semibold text-right">${escapeHtml(c.localidad || "—")}</td>
+        </tr>
+      `).join("") + (migResultados.length > 60 ? `<tr><td colspan="3" class="px-3 py-2 text-center text-slate-400 font-bold">+ ${migResultados.length - 60} más…</td></tr>` : "");
+
+      $("migCount").textContent = migResultados.length;
+      $("migPreviewCard").classList.remove("hidden");
+    });
+
+    $("btnConfirmarMigracion").addEventListener("click", async () => {
+      const origenes = Array.from(document.querySelectorAll(".mig-origen-chk:checked")).map(c => c.value);
+      const zona = $("migZona").value.trim();
+      const destino = $("migDestinoSelect").value;
+      if (!destino) return showToast("Elegí un vendedor destino", "warn");
+      if (origenes.includes(destino)) return showToast("El destino no puede ser igual al origen", "warn");
+
+      const resumen = await resumenSuave(origenes, zona, destino, migResultados.length);
+      const html = `<p class="text-sm font-semibold text-slate-600">${escapeHtml(resumen)}</p>
+        <div class="flex items-center gap-2 text-sm font-bold text-amber-600 mt-2"><i class="fas fa-triangle-exclamation"></i> Esta acción mueve la cartera de verdad — no se deshace con un click.</div>`;
+      const ok = await confirmModal("Confirmar migración", html);
+      if (!ok) return;
+
+      toggleLoading(true);
+      try {
+        const res = await apiGestor({ action: "migrarCarteraBulk", origenes, zona, destino });
+        toggleLoading(false);
+        if (!res.ok) return showToast(res.error || "No se pudo migrar", "error");
+        showToast(`${res.migrados} clientes migrados a ${destino}`, "success");
+        $("migPreviewCard").classList.add("hidden");
+        document.querySelectorAll(".mig-origen-chk").forEach(c => c.checked = false);
+        $("migZona").value = "";
+        cargarVendedores();
+      } catch (e) {
+        toggleLoading(false);
+        showToast("Error de conexión al migrar", "error");
+      }
+    });
+
+    /* =========================================================
+       INIT
+       ========================================================= */
+    cargarVendedores();
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./service-worker.js");
+    }
   </script>
-  
-<script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./service-worker.js");
-  }
-</script>
-
-
 </body>
 </html>
