@@ -157,19 +157,7 @@
             <i class="fas fa-floppy-disk mr-1.5"></i>Guardar cambios (<span id="descDirtyCount">0</span>)
           </button>
         </div>
-        <div class="max-h-[65vh] overflow-y-auto">
-          <table class="w-full text-sm">
-            <thead class="sticky top-0 bg-slate-50 text-[10px] font-black uppercase tracking-wide text-slate-400">
-              <tr>
-                <th class="text-left px-4 py-2">Número</th>
-                <th class="text-left px-4 py-2">Cliente</th>
-                <th class="text-left px-4 py-2">Localidad</th>
-                <th class="text-right px-4 py-2">Descuento</th>
-              </tr>
-            </thead>
-            <tbody id="descTableBody"></tbody>
-          </table>
-        </div>
+        <div class="max-h-[65vh] overflow-y-auto divide-y divide-slate-100" id="descTableBody"></div>
       </div>
       <div id="descEmptyMsg" class="hidden text-center text-sm font-bold text-slate-400 py-10">Este vendedor no tiene clientes asignados.</div>
     </section>
@@ -224,7 +212,7 @@
       <div id="migPreviewCard" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
         <h2 class="text-sm font-black uppercase tracking-wide text-slate-500">2. Confirmá el destino</h2>
         <div id="migResumenZonas" class="flex flex-wrap gap-1.5"></div>
-        <div class="max-h-56 overflow-y-auto border border-slate-100 rounded-xl">
+        <div class="max-h-56 overflow-y-auto overflow-x-auto border border-slate-100 rounded-xl">
           <table class="w-full text-xs">
             <tbody id="migTableBody"></tbody>
           </table>
@@ -328,7 +316,7 @@
       });
     }
 
-    // Intenta un resumen IA breve; si falla o tarda, cae a un template fijo — nunca bloquea.
+    // Intenta un resumen IA breve para migraciones; si falla o tarda, cae a un template fijo — nunca bloquea.
     async function resumenSuave(origenes, zona, destino, count) {
       const template = `Vas a mover ${count} cliente${count === 1 ? "" : "s"} de ${origenes.join("/")} hacia ${destino}${zona ? " en la zona " + zona : ""}.`;
       try {
@@ -341,6 +329,11 @@
       } catch (_) {
         return template;
       }
+    }
+
+    // Resumen simple para guardado de descuentos — no necesita IA, es un dato factual.
+    function resumenDescuentos(vendedor, count) {
+      return `Vas a actualizar el descuento de ${count} cliente${count === 1 ? "" : "s"} de ${vendedor}.`;
     }
 
     /* =========================================================
@@ -605,16 +598,18 @@
 
     function renderDescTable() {
       $("descTableBody").innerHTML = descRows.map(c => `
-        <tr class="border-t border-slate-100">
-          <td class="px-4 py-2 font-black tabular text-sm">#${escapeHtml(String(c.id))}</td>
-          <td class="px-4 py-2 text-slate-700 font-semibold truncate max-w-[160px]">${escapeHtml([c.nombre, c.apellido].filter(Boolean).join(" ") || "—")}</td>
-          <td class="px-4 py-2 text-slate-400 font-semibold">${escapeHtml(c.localidad || "—")}</td>
-          <td class="px-4 py-2 text-right">
+        <div class="flex items-center gap-3 px-4 py-2.5">
+          <div class="min-w-0 flex-1">
+            <div class="font-black tabular text-sm">#${escapeHtml(String(c.id))}</div>
+            <div class="text-xs text-slate-500 font-semibold truncate">${escapeHtml([c.nombre, c.apellido].filter(Boolean).join(" ") || "—")} <span class="text-slate-300">·</span> ${escapeHtml(c.localidad || "—")}</div>
+          </div>
+          <div class="flex items-center gap-1 flex-none">
             <input type="number" min="0" max="100" step="0.5" data-id="${escapeHtml(String(c.id))}"
               value="${c.descuento != null ? c.descuento : ''}" placeholder="0"
-              class="desc-input w-20 text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-black" />
-          </td>
-        </tr>
+              class="desc-input w-16 text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-black" />
+            <span class="text-xs font-black text-slate-400">%</span>
+          </div>
+        </div>
       `).join("");
 
       document.querySelectorAll(".desc-input").forEach(inp => {
@@ -646,7 +641,7 @@
       const extra = cambios.length > 12 ? `<p class="text-xs text-slate-400 mt-1">+ ${cambios.length - 12} más…</p>` : "";
       const vendedor = $("descVendedorSelect").value;
 
-      const resumen = await resumenSuave([vendedor], "", "descuentos actualizados", cambios.length);
+      const resumen = resumenDescuentos(vendedor, cambios.length);
       const html = `<p class="text-sm font-semibold text-slate-600">${escapeHtml(resumen)}</p><div class="max-h-48 overflow-y-auto">${rowsHtml}${extra}</div>`;
       const ok = await confirmModal(`Guardar ${cambios.length} cambios`, html);
       if (!ok) return;
