@@ -649,7 +649,7 @@
   <option value="SIN VENDEDOR">SIN VENDEDOR</option>
   <option value="MERCADO LIMPIO">MERCADO LIMPIO</option>
   <option value="MARTIN">MARTIN</option>
-  <option value="RAMIRO">RAMIRO</option>
+  <option value="NAHUEL">NAHUEL</option>
   <option value="OTRO">OTRO</option>
 </select>
 
@@ -881,7 +881,7 @@
         const vendedorOtroGroup = document.getElementById("vendedorOtroGroup");
         const vendedorOtroInput = document.getElementById("vendedorOtroInput");
 
-        if (["MARTIN", "RAMIRO", "OTRO"].includes(vendedorExistente)) {
+        if (["MARTIN", "NAHUEL", "OTRO"].includes(vendedorExistente)) {
             vendedorSelect.value = vendedorExistente;
             vendedorOtroGroup.classList.add("hidden");
             vendedorOtroInput.value = "";
