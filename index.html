@@ -140,6 +140,19 @@
 
     <!-- ============ TAB: DESCUENTOS (edición masiva) ============ -->
     <section id="tab-descuentos" class="view-tab space-y-4">
+      <div class="bg-white rounded-2xl border-2 border-blue-200 shadow-sm p-4">
+        <h2 class="text-sm font-black uppercase tracking-wide text-blue-600 mb-1"><i class="fas fa-bolt mr-1"></i>Cambio rápido — un solo cliente</h2>
+        <p class="text-[11px] text-slate-400 font-semibold mb-3">Para autorizar 7% o 10% cuando el vendedor te consulta por un cliente puntual.</p>
+        <div class="flex gap-2">
+          <input id="descQuickInput" type="text" placeholder="N° de cliente o nombre…" autocomplete="off"
+            class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold" />
+          <button id="descQuickBuscar" class="bg-blue-600 text-white text-xs font-black px-4 py-2.5 rounded-xl active:scale-95 transition">
+            <i class="fas fa-magnifying-glass"></i>
+          </button>
+        </div>
+        <div id="descQuickResults" class="mt-2 space-y-1.5"></div>
+      </div>
+
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
         <h2 class="text-sm font-black uppercase tracking-wide text-slate-500 mb-3">Editar descuentos de una cartera completa</h2>
         <div class="flex gap-2">
@@ -562,6 +575,74 @@
         toggleLoading(false);
         showToast("Error de conexión al guardar", "error");
       }
+    }
+
+    /* =========================================================
+       TAB DESCUENTOS — cambio rápido de 1 cliente
+       ========================================================= */
+    $("descQuickBuscar").addEventListener("click", buscarClienteQuick);
+    $("descQuickInput").addEventListener("keydown", (e) => { if (e.key === "Enter") buscarClienteQuick(); });
+
+    async function buscarClienteQuick() {
+      const q = $("descQuickInput").value.trim();
+      const cont = $("descQuickResults");
+      if (!q) { cont.innerHTML = ""; return; }
+      cont.innerHTML = `<div class="text-xs text-slate-400 font-semibold py-2">Buscando…</div>`;
+      let items = [];
+      try {
+        const res = await apiCartera("buscar_cliente_global", { q });
+        items = res.items || [];
+      } catch (e) {
+        cont.innerHTML = `<div class="text-xs text-red-500 font-semibold py-2">Error de conexión</div>`;
+        return;
+      }
+      if (!items.length) {
+        cont.innerHTML = `<div class="text-xs text-slate-400 font-semibold py-2">Sin resultados.</div>`;
+        return;
+      }
+      cont.innerHTML = items.map(c => {
+        const nombre = [c.nombre, c.apellido].filter(Boolean).join(" ") || "—";
+        const descActual = c.descuento != null ? `${c.descuento}%` : "sin descuento";
+        return `
+        <div class="border border-slate-200 rounded-xl p-3 flex items-center gap-3 flex-wrap" data-quick-id="${escapeHtml(String(c.id))}">
+          <div class="min-w-0 flex-1">
+            <div class="font-black text-sm">#${escapeHtml(String(c.id))} <span class="text-slate-400 font-bold">·</span> ${escapeHtml(nombre)}</div>
+            <div class="text-[11px] text-slate-400 font-semibold">${escapeHtml(c.localidad || "—")} · vendedor: ${escapeHtml(c.vendedor || "sin asignar")} · hoy: <b class="text-slate-600">${descActual}</b></div>
+          </div>
+          <div class="flex gap-1.5 flex-none">
+            <button type="button" class="quick-desc-btn bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black px-3 py-1.5 rounded-lg" data-val="">Sin desc.</button>
+            <button type="button" class="quick-desc-btn bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-black px-3 py-1.5 rounded-lg" data-val="5">5%</button>
+            <button type="button" class="quick-desc-btn bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-black px-3 py-1.5 rounded-lg" data-val="7">7%</button>
+            <button type="button" class="quick-desc-btn bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-black px-3 py-1.5 rounded-lg" data-val="10">10%</button>
+          </div>
+        </div>`;
+      }).join("");
+
+      cont.querySelectorAll(".quick-desc-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const row = btn.closest("[data-quick-id]");
+          const clienteId = row.dataset.quickId;
+          const val = btn.dataset.val;
+          const descuento = val === "" ? null : Number(val);
+          const etiqueta = descuento == null ? "sin descuento" : `${descuento}%`;
+          const ok = await confirmModal("Confirmar descuento", `<p class="text-sm font-semibold text-slate-600">Vas a dejar al cliente #${escapeHtml(clienteId)} en <b>${etiqueta}</b>.</p>`);
+          if (!ok) return;
+          toggleLoading(true);
+          try {
+            const res = await apiCartera("set_descuento", { clienteId, descuento });
+            toggleLoading(false);
+            if (res.exito) {
+              showToast(`Cliente #${clienteId} → ${etiqueta}`, "success");
+              buscarClienteQuick();
+            } else {
+              showToast("No se pudo guardar", "error");
+            }
+          } catch (e) {
+            toggleLoading(false);
+            showToast("Error de conexión al guardar", "error");
+          }
+        });
+      });
     }
 
     /* =========================================================
