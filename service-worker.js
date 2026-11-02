@@ -1,4 +1,4 @@
-const VERSION = "v6";               // 👈 CAMBIÁS SOLO ESTO CUANDO QUERÉS FORZAR UPDATE
+const VERSION = "v7";               // 👈 CAMBIÁS SOLO ESTO CUANDO QUERÉS FORZAR UPDATE
 const CACHE = `ml-clientes-${VERSION}`;
 
 const ASSETS = [

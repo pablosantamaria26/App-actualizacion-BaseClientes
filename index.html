@@ -268,6 +268,59 @@
     </div>
   </div>
 
+  <!-- Editar vendedor -->
+  <div id="editVendOverlay" class="modal-overlay hidden">
+    <div class="modal-card p-5">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <h3 class="text-lg font-black">Editar vendedor</h3>
+        <button id="evX" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex-none"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Nombre</label>
+          <input id="evNombre" type="text" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold uppercase" />
+        </div>
+        <div>
+          <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Usuario (login)</label>
+          <input id="evUsername" type="text" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold" />
+        </div>
+        <div>
+          <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">PIN nuevo (dejar vacío para no cambiarlo)</label>
+          <input id="evPin" type="text" inputmode="numeric" maxlength="4" placeholder="••••" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-black tracking-widest" />
+        </div>
+        <p class="text-[11px] text-slate-400 font-semibold">Si cambiás el nombre, también se renombran sus clientes y su historial de visitas — queda todo bajo el nombre nuevo.</p>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button id="evCancelar" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">Cancelar</button>
+        <button id="evGuardar" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-black text-sm">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Eliminar / migrar vendedor -->
+  <div id="delVendOverlay" class="modal-overlay hidden">
+    <div class="modal-card p-5">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <h3 class="text-lg font-black">Dar de baja vendedor</h3>
+        <button id="delVendX" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex-none"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div class="space-y-3">
+        <div id="delVendInfo" class="text-sm font-semibold text-slate-600 bg-slate-50 rounded-xl p-3 border border-slate-100"></div>
+        <div>
+          <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Migrar su cartera a (opcional)</label>
+          <select id="delVendDestino" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold">
+            <option value="">No migrar — dejar sin vendedor</option>
+          </select>
+        </div>
+        <p class="text-[11px] text-slate-400 font-semibold">El vendedor se desactiva (no se borra del todo) — deja de poder loguearse y de aparecer en los selectores, pero su historial de ventas queda intacto.</p>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button id="delVendCancelar" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">Cancelar</button>
+        <button id="delVendConfirmar" class="px-5 py-2.5 rounded-xl bg-red-600 text-white font-black text-sm">Dar de baja</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     /* === CONFIG === */
     const GESTOR_URL  = "https://cool-hat-bdcf.santamariapablodaniel.workers.dev/";   // getCliente / guardarCliente / migrarCarteraBulk
@@ -420,9 +473,125 @@
             <div class="font-black text-sm tabular">${carteraCounts[v.nombre] ?? "—"}</div>
             <div class="text-[9px] font-black uppercase text-slate-400">clientes</div>
           </div>
+          ${v.username === "admin" ? "" : `
+          <div class="flex items-center gap-1 flex-none">
+            <button type="button" class="vend-edit-btn w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-300" data-id="${escapeHtml(v.id)}" title="Editar"><i class="fas fa-pen text-xs"></i></button>
+            <button type="button" class="vend-del-btn w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-300" data-id="${escapeHtml(v.id)}" title="Eliminar / migrar"><i class="fas fa-trash text-xs"></i></button>
+          </div>`}
         </div>
       `).join("");
+
+      box.querySelectorAll(".vend-edit-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const v = vendedoresCache.find(x => String(x.id) === btn.dataset.id);
+          if (v) abrirEditarVendedor(v);
+        });
+      });
+      box.querySelectorAll(".vend-del-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const v = vendedoresCache.find(x => String(x.id) === btn.dataset.id);
+          if (v) abrirEliminarVendedor(v);
+        });
+      });
     }
+
+    /* =========================================================
+       TAB VENDEDORES — editar
+       ========================================================= */
+    let vendedorEnEdicion = null;
+
+    function abrirEditarVendedor(v) {
+      vendedorEnEdicion = v;
+      $("evNombre").value = v.nombre;
+      $("evUsername").value = v.username;
+      $("evPin").value = "";
+      $("editVendOverlay").classList.remove("hidden");
+    }
+
+    $("evCancelar").addEventListener("click", () => $("editVendOverlay").classList.add("hidden"));
+    $("evX").addEventListener("click", () => $("editVendOverlay").classList.add("hidden"));
+
+    $("evGuardar").addEventListener("click", async () => {
+      if (!vendedorEnEdicion) return;
+      const nombre = $("evNombre").value.trim().toUpperCase();
+      const username = $("evUsername").value.trim().toLowerCase();
+      const pin = $("evPin").value.trim();
+      if (!nombre || !username) return showToast("Nombre y usuario no pueden quedar vacíos", "warn");
+
+      const nombreCambia = nombre !== vendedorEnEdicion.nombre;
+      const count = carteraCounts[vendedorEnEdicion.nombre] ?? 0;
+
+      const html = `
+        <div class="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1 text-sm font-bold">
+          <div>Nombre: ${escapeHtml(vendedorEnEdicion.nombre)} ${nombreCambia ? `→ ${escapeHtml(nombre)}` : ""}</div>
+          <div>Usuario: ${escapeHtml(username)}</div>
+          <div>PIN: ${pin ? "se cambia" : "sin cambios"}</div>
+        </div>
+        ${nombreCambia ? `<div class="flex items-center gap-2 text-sm font-bold text-amber-600"><i class="fas fa-triangle-exclamation"></i> Esto renombra también sus ${count} cliente${count === 1 ? "" : "s"} y todo su historial de visitas — van a quedar a nombre de "${escapeHtml(nombre)}".</div>` : ""}
+      `;
+      const ok = await confirmModal("Confirmar edición", html);
+      if (!ok) return;
+
+      toggleLoading(true);
+      try {
+        const res = await apiCartera("editar_vendedor", { id: vendedorEnEdicion.id, nombre, username, pin: pin || undefined });
+        toggleLoading(false);
+        if (!res.exito) return showToast(res.error || "No se pudo editar", "error");
+        showToast(nombreCambia ? `Renombrado — ${res.clientesRenombrados ?? 0} clientes actualizados` : "Vendedor actualizado", "success");
+        $("editVendOverlay").classList.add("hidden");
+        cargarVendedores();
+      } catch (e) {
+        toggleLoading(false);
+        showToast("Error de conexión al editar", "error");
+      }
+    });
+
+    /* =========================================================
+       TAB VENDEDORES — eliminar / migrar y dar de baja
+       ========================================================= */
+    let vendedorAEliminar = null;
+
+    function abrirEliminarVendedor(v) {
+      vendedorAEliminar = v;
+      const count = carteraCounts[v.nombre] ?? 0;
+      $("delVendInfo").innerHTML = `<b>${escapeHtml(v.nombre)}</b> tiene <b>${count}</b> cliente${count === 1 ? "" : "s"} asignado${count === 1 ? "" : "s"}.`;
+      const otros = vendedoresCache.filter(x => x.id !== v.id && x.username !== "admin" && x.activo);
+      $("delVendDestino").innerHTML = `<option value="">No migrar — dejar sin vendedor</option>` +
+        otros.map(o => `<option value="${escapeHtml(o.nombre)}">${escapeHtml(o.nombre)}</option>`).join("");
+      $("delVendOverlay").classList.remove("hidden");
+    }
+
+    $("delVendCancelar").addEventListener("click", () => $("delVendOverlay").classList.add("hidden"));
+    $("delVendX").addEventListener("click", () => $("delVendOverlay").classList.add("hidden"));
+
+    $("delVendConfirmar").addEventListener("click", async () => {
+      if (!vendedorAEliminar) return;
+      const destino = $("delVendDestino").value;
+      const count = carteraCounts[vendedorAEliminar.nombre] ?? 0;
+
+      const html = destino
+        ? `<p class="text-sm font-semibold text-slate-600">Se van a migrar ${count} cliente${count === 1 ? "" : "s"} de ${escapeHtml(vendedorAEliminar.nombre)} hacia ${escapeHtml(destino)}, y después se da de baja a ${escapeHtml(vendedorAEliminar.nombre)}.</p>`
+        : `<p class="text-sm font-semibold text-slate-600">${escapeHtml(vendedorAEliminar.nombre)} se va a dar de baja.</p>${count ? `<div class="flex items-center gap-2 text-sm font-bold text-amber-600 mt-2"><i class="fas fa-triangle-exclamation"></i> Sus ${count} clientes quedan sin vendedor asignado — no se mueven a nadie.</div>` : ""}`;
+      const ok = await confirmModal("Confirmar baja de vendedor", html);
+      if (!ok) return;
+
+      toggleLoading(true);
+      try {
+        if (destino && count) {
+          const resMig = await apiGestor({ action: "migrarCarteraBulk", origenes: [vendedorAEliminar.nombre], destino });
+          if (!resMig.ok) { toggleLoading(false); return showToast(resMig.error || "No se pudo migrar la cartera", "error"); }
+        }
+        const res = await apiCartera("eliminar_vendedor", { id: vendedorAEliminar.id });
+        toggleLoading(false);
+        if (!res.exito) return showToast(res.error || "No se pudo dar de baja", "error");
+        showToast(`${vendedorAEliminar.nombre} dado de baja${destino ? ` — cartera migrada a ${destino}` : ""}`, "success");
+        $("delVendOverlay").classList.add("hidden");
+        cargarVendedores();
+      } catch (e) {
+        toggleLoading(false);
+        showToast("Error de conexión al dar de baja", "error");
+      }
+    });
 
     function renderMigOrigenes() {
       const box = $("migOrigenesList");
