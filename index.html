@@ -288,7 +288,7 @@
           <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">PIN nuevo (dejar vacío para no cambiarlo)</label>
           <input id="evPin" type="text" inputmode="numeric" maxlength="4" placeholder="••••" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-black tracking-widest" />
         </div>
-        <p class="text-[11px] text-slate-400 font-semibold">Si cambiás el nombre, también se renombran sus clientes y su historial de visitas — queda todo bajo el nombre nuevo.</p>
+        <p class="text-[11px] text-slate-400 font-semibold">Si cambiás el nombre, también se renombran sus clientes y su historial de visitas y jornadas. Los pedidos ya tomados conservan el nombre anterior.</p>
       </div>
       <div class="flex justify-end gap-2 mt-5">
         <button id="evCancelar" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">Cancelar</button>
@@ -309,7 +309,7 @@
         <div>
           <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Migrar su cartera a (opcional)</label>
           <select id="delVendDestino" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold">
-            <option value="">No migrar — dejar sin vendedor</option>
+            <option value="">No migrar — los clientes siguen a su nombre</option>
           </select>
         </div>
         <div>
@@ -388,6 +388,29 @@
         $("confirmCancel").onclick = () => close(false);
         $("confirmX").onclick = () => close(false);
       });
+    }
+
+    // Muestra el resultado final con un solo botón (éxito o error, nunca un aviso que se va solo).
+    function resultadoModal(titulo, htmlBody) {
+      return new Promise((resolve) => {
+        $("confirmTitle").textContent = titulo;
+        $("confirmMessage").innerHTML = htmlBody;
+        $("confirmCancel").classList.add("hidden");
+        $("confirmOk").textContent = "Entendido";
+        $("confirmOverlay").classList.remove("hidden");
+        const close = () => {
+          $("confirmOverlay").classList.add("hidden");
+          $("confirmCancel").classList.remove("hidden");
+          $("confirmOk").textContent = "Confirmar";
+          resolve();
+        };
+        $("confirmOk").onclick = close;
+        $("confirmX").onclick = close;
+      });
+    }
+
+    function lineaResultado(ok, texto) {
+      return `<div class="flex items-start gap-2 text-sm font-bold ${ok ? "text-emerald-700" : "text-red-600"}"><i class="fas ${ok ? "fa-circle-check" : "fa-circle-xmark"} mt-0.5"></i><span>${escapeHtml(texto)}</span></div>`;
     }
 
     // Intenta un resumen IA breve para migraciones; si falla o tarda, cae a un template fijo — nunca bloquea.
@@ -535,23 +558,42 @@
           <div>Usuario: ${escapeHtml(username)}</div>
           <div>PIN: ${pin ? "se cambia" : "sin cambios"}</div>
         </div>
-        ${nombreCambia ? `<div class="flex items-center gap-2 text-sm font-bold text-amber-600"><i class="fas fa-triangle-exclamation"></i> Esto renombra también sus ${count} cliente${count === 1 ? "" : "s"} y todo su historial de visitas — van a quedar a nombre de "${escapeHtml(nombre)}".</div>` : ""}
+        ${nombreCambia ? `<div class="flex items-center gap-2 text-sm font-bold text-amber-600"><i class="fas fa-triangle-exclamation"></i> Esto renombra también sus ${count} cliente${count === 1 ? "" : "s"} y su historial de visitas y jornadas, que van a quedar a nombre de "${escapeHtml(nombre)}". Los pedidos ya tomados conservan el nombre anterior.</div>` : ""}
       `;
       $("editVendOverlay").classList.add("hidden");
       const ok = await confirmModal("Confirmar edición", html);
       if (!ok) { $("editVendOverlay").classList.remove("hidden"); return; }
 
-      toggleLoading(true);
+      toggleLoading(true, nombreCambia ? `Renombrando a ${nombre} en planilla y clientes…` : "Guardando cambios…");
       try {
         const res = await apiCartera("editar_vendedor", { id: vendedorEnEdicion.id, nombre, username, pin: pin || undefined });
         toggleLoading(false);
-        if (!res.exito) return showToast(res.error || "No se pudo editar", "error");
-        showToast(nombreCambia ? `Renombrado — ${res.clientesRenombrados ?? 0} clientes actualizados` : "Vendedor actualizado", "success");
-        $("editVendOverlay").classList.add("hidden");
+        if (!res.exito) {
+          await resultadoModal("No se pudo guardar", lineaResultado(false, res.error || "No se pudo editar el vendedor."));
+          cargarVendedores();
+          return;
+        }
+        let html = lineaResultado(true, "Datos del vendedor guardados.");
+        let todoOk = true;
+        if (res.renombrado) {
+          html += lineaResultado(true, `${res.clientesRenombrados} cliente${res.clientesRenombrados === 1 ? "" : "s"} actualizado${res.clientesRenombrados === 1 ? "" : "s"} en la planilla.`);
+          if (res.clientesPendientes !== 0) {
+            todoOk = false;
+            html += lineaResultado(false, res.clientesPendientes > 0
+              ? `${res.clientesPendientes} cliente${res.clientesPendientes === 1 ? " sigue" : "s siguen"} con el nombre anterior en la base.`
+              : "No se pudo verificar la cartera en la base.");
+          } else {
+            html += lineaResultado(true, "Verificado: no quedó ningún cliente con el nombre anterior.");
+          }
+          if (res.historialOk) html += lineaResultado(true, "Historial de visitas y jornadas actualizado.");
+          else { todoOk = false; html += lineaResultado(false, "No se pudo actualizar el historial de visitas y jornadas."); }
+        }
+        await resultadoModal(todoOk ? "Cambios aplicados" : "Cambios aplicados con errores", html);
         cargarVendedores();
       } catch (e) {
         toggleLoading(false);
-        showToast("Error de conexión al editar", "error");
+        await resultadoModal("No se pudo confirmar", lineaResultado(false, "Se cortó la conexión. Revisá la lista de vendedores antes de reintentar."));
+        cargarVendedores();
       }
     });
 
@@ -567,17 +609,27 @@
       const count = carteraCounts[v.nombre] ?? 0;
       $("delVendInfo").innerHTML = `<b>${escapeHtml(v.nombre)}</b> tiene <b>${count}</b> cliente${count === 1 ? "" : "s"} asignado${count === 1 ? "" : "s"}.`;
       const otros = vendedoresCache.filter(x => x.id !== v.id && x.username !== "admin" && x.activo);
-      $("delVendDestino").innerHTML = `<option value="">No migrar — dejar sin vendedor</option>` +
+      $("delVendDestino").innerHTML = `<option value="">No migrar — los clientes siguen a su nombre</option>` +
         otros.map(o => `<option value="${escapeHtml(o.nombre)}">${escapeHtml(o.nombre)}</option>`).join("");
       $("delVendClientesBody").innerHTML = `<tr><td class="px-3 py-3 text-center text-slate-400 font-bold">Cargando clientes…</td></tr>`;
+      $("delVendConfirmar").disabled = true;
       $("delVendOverlay").classList.remove("hidden");
 
+      let cartera = null;
       try {
         const res = await apiCartera("preview_cartera", { vendedores: v.nombre });
-        clientesAEliminar = (res.clientes || []).sort((a, b) => String(a.localidad || "").localeCompare(String(b.localidad || "")));
-      } catch (e) {
-        clientesAEliminar = [];
+        if (res.exito) cartera = res.clientes || [];
+      } catch (e) { /* se informa abajo */ }
+
+      if (vendedorAEliminar !== v) return;
+      if (!cartera) {
+        $("delVendClientesBody").innerHTML = `<tr><td class="px-3 py-3 text-center text-red-600 font-bold">No se pudo cargar la cartera. Cerrá esta ventana y probá de nuevo.</td></tr>`;
+        return;
       }
+      clientesAEliminar = cartera.sort((a, b) => String(a.localidad || "").localeCompare(String(b.localidad || "")));
+      const real = clientesAEliminar.length;
+      $("delVendInfo").innerHTML = `<b>${escapeHtml(v.nombre)}</b> tiene <b>${real}</b> cliente${real === 1 ? "" : "s"} asignado${real === 1 ? "" : "s"}.`;
+      $("delVendConfirmar").disabled = false;
 
       if (!clientesAEliminar.length) {
         $("delVendClientesBody").innerHTML = `<tr><td class="px-3 py-3 text-center text-slate-400 font-bold">Sin clientes asignados.</td></tr>`;
@@ -602,27 +654,48 @@
 
       const html = destino
         ? `<p class="text-sm font-semibold text-slate-600">Se van a migrar ${count} cliente${count === 1 ? "" : "s"} de ${escapeHtml(vendedorAEliminar.nombre)} hacia ${escapeHtml(destino)}, y después se da de baja a ${escapeHtml(vendedorAEliminar.nombre)}.</p>`
-        : `<p class="text-sm font-semibold text-slate-600">${escapeHtml(vendedorAEliminar.nombre)} se va a dar de baja.</p>${count ? `<div class="flex items-center gap-2 text-sm font-bold text-amber-600 mt-2"><i class="fas fa-triangle-exclamation"></i> Sus ${count} clientes quedan sin vendedor asignado — no se mueven a nadie.</div>` : ""}`;
+        : `<p class="text-sm font-semibold text-slate-600">${escapeHtml(vendedorAEliminar.nombre)} se va a dar de baja.</p>${count ? `<div class="flex items-center gap-2 text-sm font-bold text-amber-600 mt-2"><i class="fas fa-triangle-exclamation"></i> Sus ${count} clientes siguen figurando a su nombre: no pasan a ningún vendedor.</div>` : ""}`;
       $("delVendOverlay").classList.add("hidden");
       const ok = await confirmModal("Confirmar baja de vendedor", html);
       if (!ok) { $("delVendOverlay").classList.remove("hidden"); return; }
 
+      const nombreBaja = vendedorAEliminar.nombre;
+      let detalle = "";
       try {
         if (destino && count) {
-          toggleLoading(true, `Migrando ${count} cliente${count === 1 ? "" : "s"} a ${destino}…`);
-          const resMig = await apiGestor({ action: "migrarCarteraBulk", origenes: [vendedorAEliminar.nombre], destino });
-          if (!resMig.ok) { toggleLoading(false); return showToast(resMig.error || "No se pudo migrar la cartera", "error"); }
+          toggleLoading(true, `Paso 1 de 3: pasando ${count} cliente${count === 1 ? "" : "s"} a ${destino}…`);
+          const resMig = await apiGestor({ action: "migrarCarteraBulk", origenes: [nombreBaja], destino, incluirLock: true });
+          if (!resMig.ok) throw new Error(resMig.error || "No se pudo migrar la cartera.");
+
+          toggleLoading(true, "Paso 2 de 3: verificando que no quede ningún cliente…");
+          const check = await apiCartera("preview_cartera", { vendedores: nombreBaja });
+          const restantes = check.exito ? (check.clientes || []).length : -1;
+          if (restantes !== 0) {
+            toggleLoading(false);
+            await resultadoModal("La baja no se hizo", lineaResultado(true, `${resMig.migrados} cliente${resMig.migrados === 1 ? " pasó" : "s pasaron"} a ${destino}.`) +
+              lineaResultado(false, restantes > 0 ? `${restantes} cliente${restantes === 1 ? " sigue" : "s siguen"} a nombre de ${nombreBaja}.` : "No se pudo verificar la cartera.") +
+              lineaResultado(false, `${nombreBaja} sigue activo. Revisá su cartera y volvé a intentar.`));
+            cargarVendedores();
+            return;
+          }
+          detalle += lineaResultado(true, `${resMig.migrados} cliente${resMig.migrados === 1 ? " pasó" : "s pasaron"} a ${destino}. Verificado: no quedó ninguno a nombre de ${nombreBaja}.`);
+        } else if (count) {
+          detalle += lineaResultado(true, `${count} cliente${count === 1 ? " sigue" : "s siguen"} a nombre de ${nombreBaja}, como elegiste.`);
         }
-        toggleLoading(true, `Dando de baja a ${vendedorAEliminar.nombre}…`);
+
+        toggleLoading(true, `${destino && count ? "Paso 3 de 3: " : ""}dando de baja a ${nombreBaja}…`);
         const res = await apiCartera("eliminar_vendedor", { id: vendedorAEliminar.id });
+        if (!res.exito) throw new Error(res.error || "No se pudo dar de baja.");
+        const lista = await apiCartera("listar_vendedores");
+        const sigue = (lista.vendedores || []).find(x => x.id === vendedorAEliminar.id);
         toggleLoading(false);
-        if (!res.exito) return showToast(res.error || "No se pudo dar de baja", "error");
-        showToast(`${vendedorAEliminar.nombre} dado de baja${destino ? ` — cartera migrada a ${destino}` : ""}`, "success");
-        $("delVendOverlay").classList.add("hidden");
+        if (!sigue || sigue.activo) throw new Error(`No se pudo confirmar la baja de ${nombreBaja}.`);
+        await resultadoModal("Baja completada", detalle + lineaResultado(true, `${nombreBaja} quedó dado de baja. Ya no puede entrar a las apps.`));
         cargarVendedores();
       } catch (e) {
         toggleLoading(false);
-        showToast("Error de conexión al dar de baja", "error");
+        await resultadoModal("La baja no terminó", detalle + lineaResultado(false, (e && e.message && !/fetch|HTTP/i.test(e.message)) ? e.message : "Se cortó la conexión. Revisá la lista de vendedores antes de reintentar."));
+        cargarVendedores();
       }
     });
 
@@ -1052,7 +1125,7 @@
         const res = await apiGestor({ action: "migrarCarteraBulk", origenes, zona, destino });
         toggleLoading(false);
         if (!res.ok) return showToast(res.error || "No se pudo migrar", "error");
-        showToast(`${res.migrados} clientes migrados a ${destino}`, "success");
+        showToast(`${res.migrados} clientes migrados a ${destino}${res.omitidosLock ? ` · ${res.omitidosLock} bloqueados no se movieron` : ""}`, res.omitidosLock ? "warn" : "success");
         $("migPreviewCard").classList.add("hidden");
         document.querySelectorAll(".mig-origen-chk").forEach(c => c.checked = false);
         $("migZona").value = "";
