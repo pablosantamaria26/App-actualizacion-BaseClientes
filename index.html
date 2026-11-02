@@ -289,6 +289,7 @@
           <input id="evPin" type="text" inputmode="numeric" maxlength="4" placeholder="••••" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-black tracking-widest" />
         </div>
         <p class="text-[11px] text-slate-400 font-semibold">Si cambiás el nombre, también se renombran sus clientes y su historial de visitas y jornadas. Los pedidos ya tomados conservan el nombre anterior.</p>
+        <p class="text-[11px] text-amber-700 font-bold">Solo para corregir el nombre de la MISMA persona. Si entra otra persona: creala como vendedor nuevo y dá de baja a la anterior pasándole la cartera.</p>
       </div>
       <div class="flex justify-end gap-2 mt-5">
         <button id="evCancelar" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">Cancelar</button>
@@ -558,7 +559,8 @@
           <div>Usuario: ${escapeHtml(username)}</div>
           <div>PIN: ${pin ? "se cambia" : "sin cambios"}</div>
         </div>
-        ${nombreCambia ? `<div class="flex items-center gap-2 text-sm font-bold text-amber-600"><i class="fas fa-triangle-exclamation"></i> Esto renombra también sus ${count} cliente${count === 1 ? "" : "s"} y su historial de visitas y jornadas, que van a quedar a nombre de "${escapeHtml(nombre)}". Los pedidos ya tomados conservan el nombre anterior.</div>` : ""}
+        ${nombreCambia ? `<div class="flex items-center gap-2 text-sm font-bold text-amber-600"><i class="fas fa-triangle-exclamation"></i> Esto renombra también sus ${count} cliente${count === 1 ? "" : "s"} y su historial de visitas y jornadas, que van a quedar a nombre de "${escapeHtml(nombre)}". Los pedidos ya tomados conservan el nombre anterior.</div>
+        <div class="flex items-center gap-2 text-sm font-black text-red-700 mt-2"><i class="fas fa-user-slash"></i> ¿Es la misma persona? Si es otra, cancelá: el historial de una persona no se le pasa a otra.</div>` : ""}
       `;
       $("editVendOverlay").classList.add("hidden");
       const ok = await confirmModal("Confirmar edición", html);
