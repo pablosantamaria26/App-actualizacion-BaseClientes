@@ -312,6 +312,14 @@
             <option value="">No migrar — dejar sin vendedor</option>
           </select>
         </div>
+        <div>
+          <label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Clientes que se moverían</label>
+          <div id="delVendClientesWrap" class="mt-1 max-h-56 overflow-y-auto overflow-x-auto border border-slate-100 rounded-xl">
+            <table class="w-full text-xs">
+              <tbody id="delVendClientesBody"></tbody>
+            </table>
+          </div>
+        </div>
         <p class="text-[11px] text-slate-400 font-semibold">El vendedor se desactiva (no se borra del todo) — deja de poder loguearse y de aparecer en los selectores, pero su historial de ventas queda intacto.</p>
       </div>
       <div class="flex justify-end gap-2 mt-5">
@@ -550,15 +558,37 @@
        TAB VENDEDORES — eliminar / migrar y dar de baja
        ========================================================= */
     let vendedorAEliminar = null;
+    let clientesAEliminar = [];
 
-    function abrirEliminarVendedor(v) {
+    async function abrirEliminarVendedor(v) {
       vendedorAEliminar = v;
+      clientesAEliminar = [];
       const count = carteraCounts[v.nombre] ?? 0;
       $("delVendInfo").innerHTML = `<b>${escapeHtml(v.nombre)}</b> tiene <b>${count}</b> cliente${count === 1 ? "" : "s"} asignado${count === 1 ? "" : "s"}.`;
       const otros = vendedoresCache.filter(x => x.id !== v.id && x.username !== "admin" && x.activo);
       $("delVendDestino").innerHTML = `<option value="">No migrar — dejar sin vendedor</option>` +
         otros.map(o => `<option value="${escapeHtml(o.nombre)}">${escapeHtml(o.nombre)}</option>`).join("");
+      $("delVendClientesBody").innerHTML = `<tr><td class="px-3 py-3 text-center text-slate-400 font-bold">Cargando clientes…</td></tr>`;
       $("delVendOverlay").classList.remove("hidden");
+
+      try {
+        const res = await apiCartera("preview_cartera", { vendedores: v.nombre });
+        clientesAEliminar = (res.clientes || []).sort((a, b) => String(a.localidad || "").localeCompare(String(b.localidad || "")));
+      } catch (e) {
+        clientesAEliminar = [];
+      }
+
+      if (!clientesAEliminar.length) {
+        $("delVendClientesBody").innerHTML = `<tr><td class="px-3 py-3 text-center text-slate-400 font-bold">Sin clientes asignados.</td></tr>`;
+        return;
+      }
+      $("delVendClientesBody").innerHTML = clientesAEliminar.map(c => `
+        <tr class="border-t border-slate-100">
+          <td class="px-3 py-1.5 font-black tabular">#${escapeHtml(String(c.id))}</td>
+          <td class="px-3 py-1.5 text-slate-600 font-semibold truncate max-w-[160px]">${escapeHtml([c.nombre, c.apellido].filter(Boolean).join(" ") || "—")}</td>
+          <td class="px-3 py-1.5 text-slate-400 font-semibold text-right">${escapeHtml(c.localidad || "—")}</td>
+        </tr>
+      `).join("");
     }
 
     $("delVendCancelar").addEventListener("click", () => $("delVendOverlay").classList.add("hidden"));
@@ -567,7 +597,7 @@
     $("delVendConfirmar").addEventListener("click", async () => {
       if (!vendedorAEliminar) return;
       const destino = $("delVendDestino").value;
-      const count = carteraCounts[vendedorAEliminar.nombre] ?? 0;
+      const count = clientesAEliminar.length;
 
       const html = destino
         ? `<p class="text-sm font-semibold text-slate-600">Se van a migrar ${count} cliente${count === 1 ? "" : "s"} de ${escapeHtml(vendedorAEliminar.nombre)} hacia ${escapeHtml(destino)}, y después se da de baja a ${escapeHtml(vendedorAEliminar.nombre)}.</p>`
