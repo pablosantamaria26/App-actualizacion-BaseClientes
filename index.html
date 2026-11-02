@@ -248,9 +248,9 @@
   <div id="toast" class="toast hidden"></div>
 
   <!-- Loading overlay -->
-  <div id="loadingOverlay" class="hidden fixed inset-0 bg-white/70 backdrop-blur-sm z-[9998] flex flex-col items-center justify-center gap-3">
+  <div id="loadingOverlay" class="hidden fixed inset-0 bg-white/70 backdrop-blur-sm z-[10000] flex flex-col items-center justify-center gap-3">
     <div class="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
-    <p class="text-xs font-black text-slate-500">Trabajando…</p>
+    <p id="loadingText" class="text-xs font-black text-slate-500">Trabajando…</p>
   </div>
 
   <!-- Confirm modal (genérico) -->
@@ -358,7 +358,7 @@
       t._timer = setTimeout(() => t.classList.add("hidden"), 3200);
     }
 
-    function toggleLoading(show) { $("loadingOverlay").classList.toggle("hidden", !show); }
+    function toggleLoading(show, texto) { $("loadingOverlay").classList.toggle("hidden", !show); if (show) $("loadingText").textContent = texto || "Trabajando…"; }
 
     /* === API genérica con reintento ante 429/red === */
     async function apiPost(url, payload, maxRetries = 3) {
@@ -537,8 +537,9 @@
         </div>
         ${nombreCambia ? `<div class="flex items-center gap-2 text-sm font-bold text-amber-600"><i class="fas fa-triangle-exclamation"></i> Esto renombra también sus ${count} cliente${count === 1 ? "" : "s"} y todo su historial de visitas — van a quedar a nombre de "${escapeHtml(nombre)}".</div>` : ""}
       `;
+      $("editVendOverlay").classList.add("hidden");
       const ok = await confirmModal("Confirmar edición", html);
-      if (!ok) return;
+      if (!ok) { $("editVendOverlay").classList.remove("hidden"); return; }
 
       toggleLoading(true);
       try {
@@ -602,15 +603,17 @@
       const html = destino
         ? `<p class="text-sm font-semibold text-slate-600">Se van a migrar ${count} cliente${count === 1 ? "" : "s"} de ${escapeHtml(vendedorAEliminar.nombre)} hacia ${escapeHtml(destino)}, y después se da de baja a ${escapeHtml(vendedorAEliminar.nombre)}.</p>`
         : `<p class="text-sm font-semibold text-slate-600">${escapeHtml(vendedorAEliminar.nombre)} se va a dar de baja.</p>${count ? `<div class="flex items-center gap-2 text-sm font-bold text-amber-600 mt-2"><i class="fas fa-triangle-exclamation"></i> Sus ${count} clientes quedan sin vendedor asignado — no se mueven a nadie.</div>` : ""}`;
+      $("delVendOverlay").classList.add("hidden");
       const ok = await confirmModal("Confirmar baja de vendedor", html);
-      if (!ok) return;
+      if (!ok) { $("delVendOverlay").classList.remove("hidden"); return; }
 
-      toggleLoading(true);
       try {
         if (destino && count) {
+          toggleLoading(true, `Migrando ${count} cliente${count === 1 ? "" : "s"} a ${destino}…`);
           const resMig = await apiGestor({ action: "migrarCarteraBulk", origenes: [vendedorAEliminar.nombre], destino });
           if (!resMig.ok) { toggleLoading(false); return showToast(resMig.error || "No se pudo migrar la cartera", "error"); }
         }
+        toggleLoading(true, `Dando de baja a ${vendedorAEliminar.nombre}…`);
         const res = await apiCartera("eliminar_vendedor", { id: vendedorAEliminar.id });
         toggleLoading(false);
         if (!res.exito) return showToast(res.error || "No se pudo dar de baja", "error");
