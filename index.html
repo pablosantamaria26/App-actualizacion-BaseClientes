@@ -272,7 +272,7 @@
   <div id="editVendOverlay" class="modal-overlay hidden">
     <div class="modal-card p-5">
       <div class="flex items-start justify-between gap-3 mb-3">
-        <h3 class="text-lg font-black">Editar vendedor</h3>
+        <h3 class="text-lg font-black">Corregir nombre o acceso</h3>
         <button id="evX" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex-none"><i class="fas fa-xmark"></i></button>
       </div>
       <div class="space-y-3">
@@ -289,11 +289,34 @@
           <input id="evPin" type="text" inputmode="numeric" maxlength="4" placeholder="••••" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-black tracking-widest" />
         </div>
         <p class="text-[11px] text-slate-400 font-semibold">Si cambiás el nombre, también se renombran sus clientes y su historial de visitas y jornadas. Los pedidos ya tomados conservan el nombre anterior.</p>
-        <p class="text-[11px] text-amber-700 font-bold">Solo para corregir el nombre de la MISMA persona. Si entra otra persona: creala como vendedor nuevo y dá de baja a la anterior pasándole la cartera.</p>
+        <p class="text-[11px] text-amber-700 font-bold">Solo para la MISMA persona. Si entra otra persona, usá Reemplazar vendedor.</p>
       </div>
       <div class="flex justify-end gap-2 mt-5">
         <button id="evCancelar" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">Cancelar</button>
         <button id="evGuardar" class="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-black text-sm">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reemplazar vendedor -->
+  <div id="reemOverlay" class="modal-overlay hidden">
+    <div class="modal-card p-5">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <h3 class="text-lg font-black">Reemplazar vendedor</h3>
+        <button id="reemX" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex-none"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div class="space-y-3">
+        <div id="reemInfo" class="text-sm font-semibold text-slate-600 bg-slate-50 rounded-xl p-3 border border-slate-100"></div>
+        <div><label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Nombre y apellido del vendedor nuevo</label>
+          <input id="reemNombre" type="text" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold" /></div>
+        <div><label class="text-[11px] font-black uppercase tracking-wide text-slate-400">Usuario</label>
+          <input id="reemUsuario" type="text" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold" /></div>
+        <div><label class="text-[11px] font-black uppercase tracking-wide text-slate-400">PIN</label>
+          <input id="reemPin" type="text" inputmode="numeric" maxlength="4" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-black tracking-widest" /></div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button id="reemCancelar" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm">Cancelar</button>
+        <button id="reemConfirmar" class="px-5 py-2.5 rounded-xl bg-amber-600 text-white font-black text-sm">Reemplazar</button>
       </div>
     </div>
   </div>
@@ -337,6 +360,7 @@
 
     let clienteActual = null;
     let vendedoresCache = [];       // [{id,nombre,username,activo}]
+    let vendedoresTodos = [], reemplazosAbiertos = [];
     let carteraCounts = {};         // { NOMBRE: cantidad }
     let descRows = [];              // filas actuales de la tab Descuentos
     const descDirty = new Map();    // id -> nuevo descuento
@@ -377,6 +401,23 @@
     }
     const apiGestor  = (payload) => apiPost(GESTOR_URL, payload);
     const apiCartera = (accion, payload = {}) => apiPost(CARTERA_URL, { accion, ...payload });
+    /* Altas, correcciones y reemplazos: mismas reglas y mismo registro que Admin Queruclor.
+       El token se pide una vez por equipo, solo si el Worker lo exige. */
+    const K_TOKEN = "qr_admin_token_v1";
+    async function apiRegistro(accion, payload = {}) {
+      const llamar = () => fetch(CARTERA_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accion, admin_token: localStorage.getItem(K_TOKEN) || undefined, ...payload }) });
+      let r = await llamar();
+      if (r.status === 403) {
+        const t = (window.prompt("Token de Administración de este equipo (se pide una sola vez):") || "").trim();
+        if (!t) return { exito: false, error: "Hace falta el token de Administración." };
+        localStorage.setItem(K_TOKEN, t);
+        r = await llamar();
+        if (r.status === 403) { localStorage.removeItem(K_TOKEN); return { exito: false, error: "El token no es correcto." }; }
+      }
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }
+    const nuevaOp = tipo => tipo + "|" + Date.now().toString(36) + "|" + Math.random().toString(36).slice(2, 10);
 
     /* === Confirm modal genérico (devuelve Promise<boolean>) === */
     function confirmModal(titulo, htmlBody) {
@@ -453,6 +494,8 @@
       try {
         const res = await apiCartera("listar_vendedores");
         vendedoresCache = (res.vendedores || []).filter(v => v.activo);
+        vendedoresTodos = res.vendedores || [];
+        reemplazosAbiertos = res.reemplazos_abiertos || [];
       } catch (e) {
         console.error(e);
         vendedoresCache = [];
@@ -494,7 +537,12 @@
     function renderVendedoresList() {
       const box = $("vendedoresList");
       if (!vendedoresCache.length) { box.innerHTML = `<p class="text-sm text-slate-400 font-semibold">Sin vendedores cargados.</p>`; return; }
-      box.innerHTML = vendedoresCache.map(v => `
+      const archivados = vendedoresTodos.filter(v => !v.activo);
+      box.innerHTML = reemplazosAbiertos.map(r => `
+        <div class="p-3 rounded-xl border border-amber-300 bg-amber-50 text-sm font-bold text-amber-800 flex items-center gap-2">
+          <span class="flex-1">Reemplazo sin terminar: ${escapeHtml(r.datos.anterior_nombre)} → ${escapeHtml(r.datos.nombre)}</span>
+          <button type="button" class="reem-seguir px-3 py-1.5 rounded-lg bg-amber-600 text-white font-black text-xs" data-op="${escapeHtml(r.op)}">Continuar</button>
+        </div>`).join("") + vendedoresCache.map(v => `
         <div class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50">
           <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-black text-xs flex-none">${escapeHtml(v.nombre.slice(0,2))}</div>
           <div class="min-w-0 flex-1">
@@ -508,11 +556,22 @@
           ${v.username === "admin" ? "" : `
           <div class="flex items-center gap-1 flex-none">
             <button type="button" class="vend-edit-btn w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-300" data-id="${escapeHtml(v.id)}" title="Editar"><i class="fas fa-pen text-xs"></i></button>
+            <button type="button" class="vend-reem-btn w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-amber-600 hover:border-amber-300" data-id="${v.id}" title="Reemplazar vendedor" aria-label="Reemplazar vendedor"><i class="fas fa-people-arrows text-xs"></i></button>
             <button type="button" class="vend-del-btn w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-300" data-id="${escapeHtml(v.id)}" title="Eliminar / migrar"><i class="fas fa-trash text-xs"></i></button>
           </div>`}
         </div>
-      `).join("");
+      `).join("") + (archivados.length ? `
+        <details class="mt-2"><summary class="text-xs font-black text-slate-400 cursor-pointer">Vendedores anteriores (${archivados.length})</summary>
+          <div class="mt-2 space-y-1">${archivados.map(v => `<div class="text-xs font-semibold text-slate-500 px-3 py-1.5 bg-slate-50 rounded-lg">${escapeHtml(v.nombre)} · dado de baja</div>`).join("")}</div>
+        </details>` : "");
 
+      box.querySelectorAll(".vend-reem-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const v = vendedoresCache.find(x => String(x.id) === btn.dataset.id);
+          if (v) abrirReemplazo(v);
+        });
+      });
+      box.querySelectorAll(".reem-seguir").forEach(btn => btn.addEventListener("click", () => correrReemplazo({ op: btn.dataset.op })));
       box.querySelectorAll(".vend-edit-btn").forEach(btn => {
         btn.addEventListener("click", () => {
           const v = vendedoresCache.find(x => String(x.id) === btn.dataset.id);
@@ -563,12 +622,12 @@
         <div class="flex items-center gap-2 text-sm font-black text-red-700 mt-2"><i class="fas fa-user-slash"></i> ¿Es la misma persona? Si es otra, cancelá: el historial de una persona no se le pasa a otra.</div>` : ""}
       `;
       $("editVendOverlay").classList.add("hidden");
-      const ok = await confirmModal("Confirmar edición", html);
+      const ok = await confirmModal(nombreCambia ? "¿Es la misma persona?" : "Confirmar cambios", html);
       if (!ok) { $("editVendOverlay").classList.remove("hidden"); return; }
 
       toggleLoading(true, nombreCambia ? `Renombrando a ${nombre} en planilla y clientes…` : "Guardando cambios…");
       try {
-        const res = await apiCartera("editar_vendedor", { id: vendedorEnEdicion.id, nombre, username, pin: pin || undefined });
+        const res = await apiRegistro("editar_vendedor", { id: vendedorEnEdicion.id, esperado: vendedorEnEdicion.nombre, misma_persona: nombreCambia, nombre, username, pin: pin || undefined });
         toggleLoading(false);
         if (!res.exito) {
           await resultadoModal("No se pudo guardar", lineaResultado(false, res.error || "No se pudo editar el vendedor."));
@@ -598,6 +657,43 @@
         cargarVendedores();
       }
     });
+
+    /* =========================================================
+       TAB VENDEDORES — reemplazar: otra persona, identidad nueva.
+       La cartera pasa con acceso a su historial; ventas, comisiones
+       y autoría se quedan con quien las hizo.
+       ========================================================= */
+    let vendedorAReemplazar = null;
+    function abrirReemplazo(v) {
+      vendedorAReemplazar = v;
+      $("reemInfo").innerHTML = `Reemplaza a <b>${escapeHtml(v.nombre)}</b>, con sus <b>${carteraCounts[v.nombre] ?? 0}</b> clientes.`;
+      ["reemNombre", "reemUsuario", "reemPin"].forEach(i => { $(i).value = ""; });
+      $("reemOverlay").classList.remove("hidden");
+    }
+    const cerrarReemplazo = () => $("reemOverlay").classList.add("hidden");
+    $("reemCancelar").addEventListener("click", cerrarReemplazo);
+    $("reemX").addEventListener("click", cerrarReemplazo);
+    $("reemConfirmar").addEventListener("click", async () => {
+      const nombre = $("reemNombre").value.trim().toUpperCase(), username = $("reemUsuario").value.trim().toLowerCase(), pin = $("reemPin").value.trim();
+      if (!nombre || !username || !pin) return showToast("Completá nombre, usuario y PIN", "warn");
+      cerrarReemplazo();
+      const ok = await confirmModal("Confirmar reemplazo", `<p class="text-sm font-semibold text-slate-600"><b>${escapeHtml(vendedorAReemplazar.nombre)}</b> queda archivado y <b>${escapeHtml(nombre)}</b> recibe su cartera, con acceso a su historial. Las ventas y comisiones anteriores no se transfieren.</p>`);
+      if (!ok) return;
+      correrReemplazo({ op: nuevaOp("reemplazo"), anterior_id: vendedorAReemplazar.id, nombre, username, pin, quien: "gestor" });
+    });
+    async function correrReemplazo(datos) {
+      toggleLoading(true, "Reemplazando al vendedor…");
+      try {
+        const r = await apiRegistro("reemplazar_vendedor", datos);
+        toggleLoading(false);
+        if (r.exito) await resultadoModal("Reemplazo completo", lineaResultado(true, `${r.nuevo.nombre} tiene ${r.clientes} clientes y ya puede entrar.`) + lineaResultado(true, `${r.anterior.nombre} quedó archivado, con su historial.`));
+        else await resultadoModal(r.parcial || r.op_abierta ? "El reemplazo no terminó" : "No se pudo reemplazar", lineaResultado(false, r.error || "Error.") + (r.parcial || r.op_abierta ? lineaResultado(true, "Podés tocar Continuar en la lista: no se repite lo ya hecho.") : ""));
+      } catch (e) {
+        toggleLoading(false);
+        await resultadoModal("No se pudo confirmar", lineaResultado(false, "Se cortó la conexión. Revisá la lista: si quedó sin terminar, tocá Continuar."));
+      }
+      cargarVendedores();
+    }
 
     /* =========================================================
        TAB VENDEDORES — eliminar / migrar y dar de baja
@@ -686,7 +782,7 @@
         }
 
         toggleLoading(true, `${destino && count ? "Paso 3 de 3: " : ""}dando de baja a ${nombreBaja}…`);
-        const res = await apiCartera("eliminar_vendedor", { id: vendedorAEliminar.id });
+        const res = await apiRegistro("eliminar_vendedor", { id: vendedorAEliminar.id });
         if (!res.exito) throw new Error(res.error || "No se pudo dar de baja.");
         const lista = await apiCartera("listar_vendedores");
         const sigue = (lista.vendedores || []).find(x => x.id === vendedorAEliminar.id);
@@ -1028,6 +1124,7 @@
       $("nvPin").value = String(Math.floor(1000 + Math.random() * 9000));
     });
 
+    let opAlta = null;  // un reintento tras perder la respuesta no crea dos altas
     $("btnCrearVendedor").addEventListener("click", async () => {
       const nombre = $("nvNombre").value.trim().toUpperCase();
       const username = $("nvUsername").value.trim().toLowerCase();
@@ -1048,7 +1145,9 @@
 
       toggleLoading(true);
       try {
-        const res = await apiCartera("crear_vendedor", { nombre, username, pin });
+        opAlta = opAlta || nuevaOp("alta");
+        const res = await apiRegistro("crear_vendedor", { op: opAlta, nombre, username, pin });
+        if (res.exito) opAlta = null;
         toggleLoading(false);
         if (!res.exito) return showToast(res.error || "No se pudo crear (¿usuario duplicado?)", "error");
         showToast(`Vendedor ${nombre} creado`, "success");
