@@ -1,4 +1,4 @@
-const VERSION = "v9";               // 👈 CAMBIÁS SOLO ESTO CUANDO QUERÉS FORZAR UPDATE
+const VERSION = "v10";               // 👈 CAMBIÁS SOLO ESTO CUANDO QUERÉS FORZAR UPDATE
 const CACHE = `ml-clientes-${VERSION}`;
 
 const ASSETS = [
@@ -18,7 +18,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k.startsWith("ml-clientes-") && k !== CACHE).map((k) => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
