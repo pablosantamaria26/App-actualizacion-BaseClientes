@@ -399,7 +399,21 @@
         }
       }
     }
-    const apiGestor  = (payload) => apiPost(GESTOR_URL, payload);
+    /* Consultar no pide nada; cambiar clientes o carteras lleva el token de este equipo. */
+    async function apiGestor(payload) {
+      if (payload.action === "getCliente") return apiPost(GESTOR_URL, payload);
+      const llamar = () => fetch(GESTOR_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ admin_token: localStorage.getItem(K_TOKEN) || undefined, ...payload }) });
+      let r = await llamar();
+      if (r.status === 403) {
+        const t = (window.prompt("Token de Administración de este equipo (se pide una sola vez):") || "").trim();
+        if (!t) return { ok: false, error: "Hace falta el token de Administración." };
+        localStorage.setItem(K_TOKEN, t);
+        r = await llamar();
+        if (r.status === 403) { localStorage.removeItem(K_TOKEN); return { ok: false, error: "El token no es correcto." }; }
+      }
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }
     const apiCartera = (accion, payload = {}) => apiPost(CARTERA_URL, { accion, ...payload });
     /* Altas, correcciones y reemplazos: mismas reglas y mismo registro que Admin Queruclor.
        El token se pide una vez por equipo, solo si el Worker lo exige. */
